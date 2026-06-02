@@ -1,12 +1,29 @@
 defmodule BrekitdownWeb.Router do
   use BrekitdownWeb, :router
 
+  import BrekitdownWeb.UserAuth
+
   pipeline :api do
     plug :accepts, ["json"]
+    plug :fetch_current_scope_for_user
+  end
+
+  pipeline :authenticated_api do
+    plug :require_authenticated_user
   end
 
   scope "/api", BrekitdownWeb do
     pipe_through :api
+
+    post "/users/register", UserRegistrationController, :create
+    post "/users/log-in", UserSessionController, :create
+
+    scope "/" do
+      pipe_through :authenticated_api
+
+      get "/users/me", UserController, :me
+      delete "/users/log-out", UserSessionController, :delete
+    end
   end
 
   # Enable LiveDashboard in development

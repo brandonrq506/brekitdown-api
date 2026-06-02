@@ -1,7 +1,7 @@
 defmodule BrekitdownWeb.ChangesetJSON do
   @doc "Renders changeset errors as a field => [messages] map."
 
-  def errors(%{changeset: changeset}) do
+  def error(%{changeset: changeset}) do
     %{errors: Ecto.Changeset.traverse_errors(changeset, &translate_error/1)}
   end
 

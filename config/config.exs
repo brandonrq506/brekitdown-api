@@ -7,6 +7,19 @@
 # General application configuration
 import Config
 
+config :brekitdown, :scopes,
+  user: [
+    default: true,
+    module: Brekitdown.Accounts.Scope,
+    assign_key: :current_scope,
+    access_path: [:user, :id],
+    schema_key: :user_id,
+    schema_type: :id,
+    schema_table: :users,
+    test_data_fixture: Brekitdown.AccountsFixtures,
+    test_setup_helper: :register_and_log_in_user
+  ]
+
 config :brekitdown,
   ecto_repos: [Brekitdown.Repo],
   generators: [timestamp_type: :utc_datetime]
@@ -29,6 +42,14 @@ config :logger, :default_formatter,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# Swoosh mailer. Email flows (magic link, email change) are wired but unrouted for now.
+# The Local adapter keeps mail in-memory (dev mailbox preview) and needs no external service;
+# swap to a real adapter when email is actually sent in production.
+config :brekitdown, Brekitdown.Mailer, adapter: Swoosh.Adapters.Local
+
+# Disable Swoosh API client — the Local/Test adapters don't need an HTTP client.
+config :swoosh, :api_client, false
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

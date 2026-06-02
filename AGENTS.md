@@ -18,6 +18,36 @@ This is a web application written using the Phoenix web framework.
 - If you override the default input classes (`<.input class="myclass px-2 py-1 rounded-lg">)`) class with your own values, no default classes are inherited, so your
 custom classes must fully style the input
 
+<!-- phoenix-gen-auth-start -->
+## Authentication
+
+- **Always** handle authentication at the router level. There are no redirects — unauthenticated requests **halt with `401` JSON**, never a redirect to a login page.
+- **Always** be mindful of where to place routes. Auth is enforced by two router plugs (in `lib/brekitdown_web/user_auth.ex`):
+  - A plug `:fetch_current_scope_for_user` included in the `:api` pipeline. It reads the `Authorization: Bearer <token>` header and assigns `current_scope` (the user, or an anonymous scope when the token is missing/invalid). It **never halts** — route guards decide access.
+  - A plug `:require_authenticated_user` that **halts with `401` and a JSON error** when there is no current user (it does **not** redirect).
+  - In both cases, a `@current_scope` is assigned to the Plug connection.
+  - There is **no** `redirect_if_user_is_authenticated` plug — that is browser-only (hiding a registration page from logged-in users via redirect) and has no api-only equivalent here.
+- **Always let the user know in which router scopes and pipeline you are placing the route, AND SAY WHY**
+- `phx.gen.auth` assigns the `current_scope` assign - it **does not assign a `current_user` assign**
+- Always pass the assign `current_scope` to context modules as first argument. When performing queries, use `current_scope.user` to filter the query results
+- To derive/access `current_user` in controllers and JSON views, **always use `conn.assigns.current_scope.user`** (there are no templates), never use a `current_user` assign
+- Anytime you hit `current_scope` errors or the wrong user's data is returned, **always double check the router and ensure you are using the correct plug as described below**
+
+### Routes that require authentication
+
+Controller routes must be placed in a scope that adds the `:require_authenticated_user` plug after `:api`:
+
+    scope "/api", BrekitdownWeb do
+      pipe_through [:api, :require_authenticated_user]
+
+      get "/me", MyControllerThatRequiresAuth, :show
+    end
+
+### Routes that work with or without authentication
+
+Controllers automatically have the `current_scope` available if they use the `:api` pipeline (it runs `:fetch_current_scope_for_user`).
+
+<!-- phoenix-gen-auth-end -->
 
 <!-- usage-rules-start -->
 

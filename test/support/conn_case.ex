@@ -35,4 +35,34 @@ defmodule BrekitdownWeb.ConnCase do
     Brekitdown.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
+
+  @doc """
+  Setup helper that registers and logs in users.
+
+      setup :register_and_log_in_user
+
+  It stores an updated connection and a registered user in the
+  test context.
+  """
+  def register_and_log_in_user(%{conn: conn}) do
+    user = Brekitdown.AccountsFixtures.user_fixture()
+    scope = Brekitdown.Accounts.Scope.for_user(user)
+    %{conn: log_in_user(conn, user), user: user, scope: scope}
+  end
+
+  @doc """
+  Logs the given `user` into the `conn` by minting a session token and
+  putting it in the `Authorization: Bearer` header (the API's transport).
+
+  It returns an updated `conn`.
+  """
+  def log_in_user(conn, user) do
+    token = Brekitdown.Accounts.generate_user_session_token(user)
+
+    Plug.Conn.put_req_header(
+      conn,
+      "authorization",
+      "Bearer " <> Base.url_encode64(token, padding: false)
+    )
+  end
 end
