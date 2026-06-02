@@ -23,6 +23,10 @@ end
 config :brekitdown, BrekitdownWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+config :cors_plug,
+  origin: String.split(System.get_env("CORS_ORIGIN", "http://localhost:5173"), ","),
+  credentials: false
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
