@@ -1,0 +1,32 @@
+version: 2
+updates:
+  # Hex dependencies (mix.exs / mix.lock).
+  - package-ecosystem: mix
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+    # Supply-chain defense: let newly published versions age before proposing
+    # them; a malicious release is usually yanked within hours/days. Only delays
+    # version updates -- security (advisory) updates still open immediately.
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 5
+
+  # Keeps the SHA-pinned actions in ci.yml patched (Dependabot reads the trailing
+  # `# vX.Y.Z` comments and bumps both the SHA and the comment). Cooldown here
+  # defends against a compromised action release being auto-proposed before it's
+  # caught and pulled.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - github-actions
+    cooldown:
+      default-days: 7
