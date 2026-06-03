@@ -1,8 +1,15 @@
 defmodule Brekitdown.Accounts.UserNotifier do
+  @moduledoc """
+  Delivers account-lifecycle transactional emails via `Brekitdown.Mailer`.
+
+  Builds plain-text `Swoosh.Email` messages for the account flows: email-update
+  instructions, magic-link login, and account confirmation.
+  """
+
   import Swoosh.Email
 
-  alias Brekitdown.Mailer
   alias Brekitdown.Accounts.User
+  alias Brekitdown.Mailer
 
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do

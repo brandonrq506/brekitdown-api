@@ -26,7 +26,7 @@ defmodule Brekitdown.MixProject do
 
   def cli do
     [
-      preferred_envs: [precommit: :test]
+      preferred_envs: [precommit: :test, pc: :test]
     ]
   end
 
@@ -52,7 +52,10 @@ defmodule Brekitdown.MixProject do
       {:phoenix_live_dashboard, "~> 0.8.3"},
       {:swoosh, "~> 1.4"},
       {:telemetry_metrics, "~> 1.0"},
-      {:telemetry_poller, "~> 1.0"}
+      {:telemetry_poller, "~> 1.0"},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
+      {:sobelow, "~> 0.14", only: [:dev, :test], runtime: false, warn_if_outdated: true}
     ]
   end
 
@@ -68,7 +71,23 @@ defmodule Brekitdown.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
-      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
+      quality: [
+        "format --check-formatted",
+        "deps.unlock --check-unused",
+        "credo --strict",
+        "sobelow --exit low",
+        "deps.audit"
+      ],
+      precommit: [
+        "compile --warnings-as-errors",
+        "deps.unlock --unused",
+        "format",
+        "credo --strict",
+        "sobelow --exit low",
+        "deps.audit",
+        "test"
+      ],
+      pc: ["precommit"]
     ]
   end
 end

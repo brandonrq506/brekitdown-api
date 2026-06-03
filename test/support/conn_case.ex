@@ -31,6 +31,8 @@ defmodule BrekitdownWeb.ConnCase do
     end
   end
 
+  alias Brekitdown.Accounts.Scope
+
   setup tags do
     Brekitdown.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
@@ -46,7 +48,7 @@ defmodule BrekitdownWeb.ConnCase do
   """
   def register_and_log_in_user(%{conn: conn}) do
     user = Brekitdown.AccountsFixtures.user_fixture()
-    scope = Brekitdown.Accounts.Scope.for_user(user)
+    scope = Scope.for_user(user)
     %{conn: log_in_user(conn, user), user: user, scope: scope}
   end
 
