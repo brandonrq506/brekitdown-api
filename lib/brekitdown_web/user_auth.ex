@@ -1,4 +1,15 @@
 defmodule BrekitdownWeb.UserAuth do
+  @moduledoc """
+  Authentication plugs for the API's token-based auth.
+
+  Clients authenticate by sending their session token in the
+  `Authorization: Bearer <token>` header. `fetch_current_scope_for_user/2`
+  resolves that token into the request's `:current_scope` (anonymous when the
+  token is missing, malformed, or expired), and `require_authenticated_user/2`
+  guards protected routes by halting with `401` when no authenticated user is
+  present.
+  """
+
   import Plug.Conn
   import Phoenix.Controller
 

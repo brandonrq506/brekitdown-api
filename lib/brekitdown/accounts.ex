@@ -6,7 +6,7 @@ defmodule Brekitdown.Accounts do
   import Ecto.Query
   alias Brekitdown.Repo
 
-  alias Brekitdown.Accounts.{User, UserToken, UserNotifier}
+  alias Brekitdown.Accounts.{User, UserNotifier, UserToken}
 
   ## Database getters
 

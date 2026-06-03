@@ -1,0 +1,13 @@
+[
+    exit: false,
+    format: "txt",
+    ignore_files: [],
+    ignore: [],
+    out: nil,
+    private: true,
+    router: "lib/brekitdown_web/router.ex",
+    skip: true,
+    threshold: :low,
+    verbose: false,
+    version: false
+]
