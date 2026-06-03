@@ -1,0 +1,121 @@
+name: CI
+
+# PRs only (per decision). Mark the "Quality & Tests" check required in the
+# GitHub UI to gate merges. Using `pull_request` (not `pull_request_target`)
+# means untrusted PR code never runs with repo secrets / a write token.
+on:
+  pull_request:
+
+# Least privilege: read-only token. No write scopes granted anywhere.
+permissions:
+  contents: read
+
+# Cancel superseded runs on the same PR (cost/perf; not a security control).
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  MIX_ENV: test # compile once in :test; reused by credo, sobelow and the tests
+  CACHE_VERSION: v1 # bump to manually bust the deps/_build cache
+
+jobs:
+  ci:
+    name: Quality & Tests
+    runs-on: ubuntu-24.04 # pinned, not ubuntu-latest
+    timeout-minutes: 15 # bound on runaway / exfiltration
+
+    services:
+      postgres:
+        # Matches prod (PG18 -> uuidv7()). Digest-pinned, not a floating tag.
+        image: postgres:18-alpine@sha256:96d56f7f57c6aacd1fcb908bc83b345ec5f83231ee486dd66a1baadce274db88
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      # All third-party actions are pinned to a full commit SHA (immutable).
+      # The trailing `# vX.Y.Z` comment lets Dependabot bump them safely.
+
+      # Must be the first step so egress is enforced before anything else runs.
+      - name: Harden runner (egress block)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: block
+          # Allowlist derived from the audit run (PR #16). harden-runner auto-allows
+          # GitHub's Actions control-plane + cache backend, so only the app's own
+          # egress is listed here. If a future run blocks a host, it's annotated in
+          # the run logs -- add it here.
+          #   github.com    -> git checkout + downloading the SHA-pinned actions
+          #   builds.hex.pm -> setup-beam: precompiled OTP + Elixir
+          #   repo.hex.pm   -> mix local.hex / local.rebar + mix deps.get tarballs
+          allowed-endpoints: >
+            builds.hex.pm:443
+            github.com:443
+            repo.hex.pm:443
+
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false # don't leave GITHUB_TOKEN in .git/config
+
+      - name: Set up Elixir/OTP
+        id: beam
+        uses: erlef/setup-beam@fc68ffb90438ef2936bbb3251622353b3dcb2f93 # v1.24.0
+        with:
+          version-file: .tool-versions # single source of truth (Elixir 1.19.1 / OTP 28.1.1)
+          version-type: strict
+
+      - name: Cache deps and _build
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: |
+            deps
+            _build
+          # Exact key only (no restore-keys): a foreign or poisoned cache from a
+          # different lockfile/toolchain can never partially seed the build.
+          key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-otp${{ steps.beam.outputs.otp-version }}-elixir${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('**/mix.lock') }}
+
+      - name: Install dependencies (locked)
+        run: mix deps.get --check-locked # fails if mix.lock would change
+
+      # --- Every check below runs even if an earlier one failed (!cancelled()),
+      #     so one fix can surface problems elsewhere. Any failure still fails the
+      #     job. No `continue-on-error` anywhere => nothing fails silently. ---
+
+      - name: Compile (warnings as errors)
+        if: ${{ !cancelled() }}
+        run: mix compile --warnings-as-errors
+
+      - name: Check formatting
+        if: ${{ !cancelled() }}
+        run: mix format --check-formatted
+
+      - name: Check for unused deps in mix.lock
+        if: ${{ !cancelled() }}
+        run: mix deps.unlock --check-unused
+
+      - name: Credo (strict)
+        if: ${{ !cancelled() }}
+        run: mix credo --strict
+
+      - name: Sobelow (security scan)
+        if: ${{ !cancelled() }}
+        run: mix sobelow --exit low
+
+      - name: Audit dependencies for known CVEs
+        if: ${{ !cancelled() }}
+        run: mix deps.audit
+
+      # The `test` alias creates + migrates the test DB against the Postgres
+      # service, then runs the suite.
+      - name: Run tests
+        if: ${{ !cancelled() }}
+        run: mix test
