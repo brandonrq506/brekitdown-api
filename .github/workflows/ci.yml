@@ -44,11 +44,22 @@ jobs:
       # All third-party actions are pinned to a full commit SHA (immutable).
       # The trailing `# vX.Y.Z` comment lets Dependabot bump them safely.
 
-      # Must be the first step so egress is monitored from the start.
-      - name: Harden runner (egress audit)
+      # Must be the first step so egress is enforced before anything else runs.
+      - name: Harden runner (egress block)
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
-          egress-policy: audit # -> switch to `block` + allowlist once the report is reviewed
+          egress-policy: block
+          # Allowlist derived from the audit run (PR #16). harden-runner auto-allows
+          # GitHub's Actions control-plane + cache backend, so only the app's own
+          # egress is listed here. If a future run blocks a host, it's annotated in
+          # the run logs -- add it here.
+          #   github.com    -> git checkout + downloading the SHA-pinned actions
+          #   builds.hex.pm -> setup-beam: precompiled OTP + Elixir
+          #   repo.hex.pm   -> mix local.hex / local.rebar + mix deps.get tarballs
+          allowed-endpoints: >
+            builds.hex.pm:443
+            github.com:443
+            repo.hex.pm:443
 
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
