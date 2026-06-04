@@ -76,7 +76,7 @@ defmodule BrekitdownWeb.UserAuthTest do
 
       assert conn.halted
       assert conn.status == 401
-      assert Jason.decode!(conn.resp_body) == %{"error" => "unauthorized"}
+      assert Jason.decode!(conn.resp_body) == %{"errors" => %{"detail" => "Unauthorized"}}
     end
 
     test "lets the request through for an authenticated user", %{conn: conn, user: user} do

@@ -17,7 +17,7 @@ defmodule BrekitdownWeb.UserSessionController do
     else
       conn
       |> put_status(:unauthorized)
-      |> json(%{error: "Invalid email or password"})
+      |> json(%{errors: %{detail: "Invalid email or password"}})
     end
   end
 

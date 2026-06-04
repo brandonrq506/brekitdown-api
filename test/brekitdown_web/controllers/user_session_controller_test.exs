@@ -25,7 +25,7 @@ defmodule BrekitdownWeb.UserSessionControllerTest do
       conn =
         post(conn, ~p"/api/users/log-in", user: %{email: user.email, password: "wrong password"})
 
-      assert json_response(conn, 401)["error"]
+      assert json_response(conn, 401) == %{"errors" => %{"detail" => "Invalid email or password"}}
     end
 
     test "returns 401 for an unknown email", %{conn: conn} do
@@ -34,7 +34,7 @@ defmodule BrekitdownWeb.UserSessionControllerTest do
           user: %{email: "nobody@example.com", password: valid_user_password()}
         )
 
-      assert json_response(conn, 401)["error"]
+      assert json_response(conn, 401) == %{"errors" => %{"detail" => "Invalid email or password"}}
     end
   end
 

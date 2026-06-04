@@ -52,9 +52,11 @@ defmodule BrekitdownWeb.UserAuth do
     if conn.assigns.current_scope && conn.assigns.current_scope.user do
       conn
     else
+      # Does not return `{:error :unauthorized}` since this is a plug, not a controller action.
+      # Plugs must always return a `Plug.Conn` (halting or not), otherwise Phoenix will crash.
       conn
       |> put_status(:unauthorized)
-      |> json(%{error: "unauthorized"})
+      |> json(%{errors: %{detail: "Unauthorized"}})
       |> halt()
     end
   end
