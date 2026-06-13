@@ -5,6 +5,8 @@ defmodule BrekitdownWeb.UserSessionController do
   alias Brekitdown.Accounts
   alias BrekitdownWeb.Schemas.{LoginRequest, UserWithToken, Error}
 
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: BrekitdownWeb.ValidationErrorPlug
+
   tags(["users"])
 
   operation(:create,
@@ -16,7 +18,9 @@ defmodule BrekitdownWeb.UserSessionController do
     ]
   )
 
-  def create(conn, %{"user" => %{"email" => email, "password" => password}}) do
+  def create(conn, _params) do
+    %LoginRequest{user: %{email: email, password: password}} = OpenApiSpex.body_params(conn)
+
     if user = Accounts.get_user_by_email_and_password(email, password) do
       token =
         user

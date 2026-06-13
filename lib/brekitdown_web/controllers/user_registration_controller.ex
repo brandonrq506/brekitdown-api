@@ -7,6 +7,8 @@ defmodule BrekitdownWeb.UserRegistrationController do
 
   action_fallback BrekitdownWeb.FallbackController
 
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: BrekitdownWeb.ValidationErrorPlug
+
   tags(["users"])
 
   operation(:create,
@@ -18,7 +20,9 @@ defmodule BrekitdownWeb.UserRegistrationController do
     ]
   )
 
-  def create(conn, %{"user" => user_params}) do
+  def create(conn, _params) do
+    %RegisterRequest{user: user_params} = OpenApiSpex.body_params(conn)
+
     with {:ok, user} <- Accounts.register_user(user_params) do
       token =
         user
