@@ -3,7 +3,7 @@ defmodule BrekitdownWeb.UserSessionController do
   use OpenApiSpex.ControllerSpecs
 
   alias Brekitdown.Accounts
-  alias BrekitdownWeb.Schemas.{LoginRequest, UserWithToken, Error}
+  alias BrekitdownWeb.Schemas.{Error, LoginRequest, UserWithToken}
 
   plug OpenApiSpex.Plug.CastAndValidate, render_error: BrekitdownWeb.ValidationErrorPlug
 

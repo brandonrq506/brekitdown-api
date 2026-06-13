@@ -2,7 +2,7 @@ defmodule BrekitdownWeb.UserController do
   use BrekitdownWeb, :controller
   use OpenApiSpex.ControllerSpecs
 
-  alias BrekitdownWeb.Schemas.{UserResponse, Error}
+  alias BrekitdownWeb.Schemas.{Error, UserResponse}
 
   tags(["users"])
 

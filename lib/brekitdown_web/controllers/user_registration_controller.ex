@@ -2,8 +2,8 @@ defmodule BrekitdownWeb.UserRegistrationController do
   use BrekitdownWeb, :controller
   use OpenApiSpex.ControllerSpecs
 
-  alias BrekitdownWeb.Schemas.{RegisterRequest, UserWithToken, ChangesetError}
   alias Brekitdown.Accounts
+  alias BrekitdownWeb.Schemas.{ChangesetError, RegisterRequest, UserWithToken}
 
   action_fallback BrekitdownWeb.FallbackController
 

@@ -1,4 +1,5 @@
 defmodule BrekitdownWeb.Schemas.RegisterRequest do
+  @moduledoc "Request body for POST /api/users/register: a nested user with email and password."
   require OpenApiSpex
   alias OpenApiSpex.Schema
 

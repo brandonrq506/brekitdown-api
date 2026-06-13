@@ -1,4 +1,5 @@
 defmodule BrekitdownWeb.Schemas.ChangesetError do
+  @moduledoc "Validation error envelope keyed by field name (field => list of messages). Returned as 422 on register."
   require OpenApiSpex
   alias OpenApiSpex.Schema
 

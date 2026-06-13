@@ -1,8 +1,8 @@
 defmodule BrekitdownWeb.ApiSpec do
   @moduledoc "Assembles the OpenAPI 3 document from the router and schema modules."
 
-  alias OpenApiSpex.{Components, Info, OpenApi, Paths, SecurityScheme, Server}
   alias BrekitdownWeb.{Endpoint, Router}
+  alias OpenApiSpex.{Components, Info, OpenApi, Paths, SecurityScheme, Server}
 
   @behaviour OpenApi
 

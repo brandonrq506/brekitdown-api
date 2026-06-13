@@ -1,4 +1,5 @@
 defmodule BrekitdownWeb.Schemas.UserResponse do
+  @moduledoc "Single-user response envelope. Returned by GET /api/users/me."
   require OpenApiSpex
   alias BrekitdownWeb.Schemas.User
 

@@ -1,4 +1,5 @@
 defmodule BrekitdownWeb.Schemas.User do
+  @moduledoc "Public representation of a user, embedded in UserResponse and UserWithToken. Omits internal fields like id and hashed_password."
   require OpenApiSpex
   alias OpenApiSpex.Schema
 
