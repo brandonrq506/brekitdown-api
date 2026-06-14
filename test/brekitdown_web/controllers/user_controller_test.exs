@@ -15,6 +15,7 @@ defmodule BrekitdownWeb.UserControllerTest do
       assert body_user["reference_xid"] == user.reference_xid
       refute Map.has_key?(body_user, "id")
       refute Map.has_key?(body_user, "hashed_password")
+      assert_response_schema(conn, 200, "UserResponse")
     end
   end
 
@@ -25,7 +26,7 @@ defmodule BrekitdownWeb.UserControllerTest do
         |> put_req_header("accept", "application/json")
         |> get(~p"/api/users/me")
 
-      assert json_response(conn, 401)
+      assert_response_schema(conn, 401, "Error")
     end
 
     test "returns 401 for a malformed token", %{conn: conn} do
@@ -35,7 +36,7 @@ defmodule BrekitdownWeb.UserControllerTest do
         |> put_req_header("authorization", "Bearer not-a-real-token")
         |> get(~p"/api/users/me")
 
-      assert json_response(conn, 401)
+      assert_response_schema(conn, 401, "Error")
     end
   end
 end

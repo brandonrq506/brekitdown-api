@@ -15,6 +15,16 @@ defmodule BrekitdownWeb.Router do
 
   pipeline :openapi_docs do
     plug :accepts, ["json", "html"]
+
+    plug :put_secure_browser_headers,
+         %{
+           "content-security-policy" =>
+             "default-src 'self' https:; " <>
+               "script-src 'self' 'unsafe-inline' https:; " <>
+               "style-src 'self' 'unsafe-inline' https:; " <>
+               "img-src 'self' data: https:"
+         }
+
     plug OpenApiSpex.Plug.PutApiSpec, module: BrekitdownWeb.ApiSpec
   end
 
