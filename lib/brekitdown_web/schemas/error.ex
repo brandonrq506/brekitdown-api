@@ -1,5 +1,5 @@
 defmodule BrekitdownWeb.Schemas.Error do
-  @moduledoc "Generic error envelope ({errors: {detail}}). Used for 4xx responses such as 401 Unauthorized."
+  @moduledoc "Generic error envelope (%{errors: %{detail: ...}}). Used for 4xx responses such as 401 Unauthorized."
   require OpenApiSpex
   alias OpenApiSpex.Schema
 
