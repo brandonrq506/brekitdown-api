@@ -6,10 +6,26 @@ defmodule BrekitdownWeb.Router do
   pipeline :api do
     plug :accepts, ["json"]
     plug :fetch_current_scope_for_user
+    plug OpenApiSpex.Plug.PutApiSpec, module: BrekitdownWeb.ApiSpec
   end
 
   pipeline :authenticated_api do
     plug :require_authenticated_user
+  end
+
+  pipeline :openapi_docs do
+    plug :accepts, ["json", "html"]
+
+    plug :put_secure_browser_headers,
+         %{
+           "content-security-policy" =>
+             "default-src 'self' https:; " <>
+               "script-src 'self' 'unsafe-inline' https:; " <>
+               "style-src 'self' 'unsafe-inline' https:; " <>
+               "img-src 'self' data: https:"
+         }
+
+    plug OpenApiSpex.Plug.PutApiSpec, module: BrekitdownWeb.ApiSpec
   end
 
   scope "/api", BrekitdownWeb do
@@ -34,6 +50,13 @@ defmodule BrekitdownWeb.Router do
     # you can use Plug.BasicAuth to set up some basic authentication
     # as long as you are also using SSL (which you should anyway).
     import Phoenix.LiveDashboard.Router
+
+    scope "/dev" do
+      pipe_through :openapi_docs
+
+      get "/openapi", OpenApiSpex.Plug.RenderSpec, []
+      get "/swaggerui", OpenApiSpex.Plug.SwaggerUI, path: "/dev/openapi"
+    end
 
     scope "/dev" do
       pipe_through [:fetch_session, :protect_from_forgery]

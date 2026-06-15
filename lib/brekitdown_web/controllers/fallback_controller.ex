@@ -6,7 +6,7 @@ defmodule BrekitdownWeb.FallbackController do
   # Catches {:error, changeset} from any action that declares this as action_fallback
   def call(conn, {:error, %Ecto.Changeset{} = changeset}) do
     conn
-    |> put_status(:unprocessable_entity)
+    |> put_status(:unprocessable_content)
     |> put_view(BrekitdownWeb.ChangesetJSON)
     |> render(:error, changeset: changeset)
   end

@@ -4,7 +4,12 @@ defmodule BrekitdownWeb.UserRegistrationControllerTest do
   import Brekitdown.AccountsFixtures
 
   setup %{conn: conn} do
-    {:ok, conn: put_req_header(conn, "accept", "application/json")}
+    conn =
+      conn
+      |> put_req_header("accept", "application/json")
+      |> put_req_header("content-type", "application/json")
+
+    {:ok, conn: conn}
   end
 
   describe "POST /api/users/register" do
@@ -22,6 +27,7 @@ defmodule BrekitdownWeb.UserRegistrationControllerTest do
       # internal id and the password hash must never be exposed
       refute Map.has_key?(user, "id")
       refute Map.has_key?(user, "hashed_password")
+      assert_response_schema(conn, 201, "UserWithToken")
 
       me =
         build_conn()
@@ -32,13 +38,14 @@ defmodule BrekitdownWeb.UserRegistrationControllerTest do
       assert json_response(me, 200)["user"]["email"] == email
     end
 
-    test "returns 422 with field errors for invalid params", %{conn: conn} do
+    test "returns 422 for a schema-invalid body", %{conn: conn} do
       conn =
-        post(conn, ~p"/api/users/register", user: %{email: "not valid", password: "short"})
+        post(conn, ~p"/api/users/register",
+          user: %{email: unique_user_email(), password: "short"}
+        )
 
-      assert %{"errors" => errors} = json_response(conn, 422)
-      assert errors["email"]
-      assert errors["password"]
+      assert %{"errors" => %{"password" => _}} =
+               assert_response_schema(conn, 422, "ChangesetError")
     end
 
     test "returns 422 when the email is already taken", %{conn: conn} do
@@ -49,7 +56,8 @@ defmodule BrekitdownWeb.UserRegistrationControllerTest do
           user: %{email: email, password: valid_user_password()}
         )
 
-      assert "has already been taken" in json_response(conn, 422)["errors"]["email"]
+      body = assert_response_schema(conn, 422, "ChangesetError")
+      assert "has already been taken" in body["errors"]["email"]
     end
   end
 end

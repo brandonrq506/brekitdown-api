@@ -67,4 +67,16 @@ defmodule BrekitdownWeb.ConnCase do
       "Bearer " <> Base.url_encode64(token, padding: false)
     )
   end
+
+  @doc """
+  Asserts the JSON response at `status` conforms to the named OpenAPI schema from
+  `BrekitdownWeb.ApiSpec`, and returns the decoded body for further assertions.
+
+      body = assert_response_schema(conn, 200, "UserResponse")
+  """
+  def assert_response_schema(conn, status, schema_title) do
+    body = Phoenix.ConnTest.json_response(conn, status)
+    OpenApiSpex.TestAssertions.assert_schema(body, schema_title, BrekitdownWeb.ApiSpec.spec())
+    body
+  end
 end

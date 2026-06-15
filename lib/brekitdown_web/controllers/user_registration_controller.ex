@@ -1,11 +1,28 @@
 defmodule BrekitdownWeb.UserRegistrationController do
   use BrekitdownWeb, :controller
+  use OpenApiSpex.ControllerSpecs
 
   alias Brekitdown.Accounts
+  alias BrekitdownWeb.Schemas.{ChangesetError, RegisterRequest, UserWithToken}
 
   action_fallback BrekitdownWeb.FallbackController
 
-  def create(conn, %{"user" => user_params}) do
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: BrekitdownWeb.ValidationErrorPlug
+
+  tags(["users"])
+
+  operation(:create,
+    summary: "Register a new user",
+    request_body: {"Registration params", "application/json", RegisterRequest},
+    responses: [
+      created: {"User created with a session token", "application/json", UserWithToken},
+      unprocessable_entity: {"Validation errors", "application/json", ChangesetError}
+    ]
+  )
+
+  def create(conn, _params) do
+    %RegisterRequest{user: user_params} = OpenApiSpex.body_params(conn)
+
     with {:ok, user} <- Accounts.register_user(user_params) do
       token =
         user

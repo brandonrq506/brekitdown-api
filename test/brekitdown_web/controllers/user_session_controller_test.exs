@@ -6,7 +6,12 @@ defmodule BrekitdownWeb.UserSessionControllerTest do
   alias Brekitdown.Accounts
 
   setup %{conn: conn} do
-    %{conn: put_req_header(conn, "accept", "application/json"), user: user_fixture()}
+    conn =
+      conn
+      |> put_req_header("accept", "application/json")
+      |> put_req_header("content-type", "application/json")
+
+    %{conn: conn, user: user_fixture()}
   end
 
   describe "POST /api/users/log-in" do
@@ -19,6 +24,7 @@ defmodule BrekitdownWeb.UserSessionControllerTest do
       assert %{"user" => body_user, "token" => token} = json_response(conn, 200)
       assert body_user["email"] == user.email
       assert is_binary(token)
+      assert_response_schema(conn, 200, "UserWithToken")
     end
 
     test "returns 401 for an invalid password", %{conn: conn, user: user} do
@@ -26,6 +32,7 @@ defmodule BrekitdownWeb.UserSessionControllerTest do
         post(conn, ~p"/api/users/log-in", user: %{email: user.email, password: "wrong password"})
 
       assert json_response(conn, 401) == %{"errors" => %{"detail" => "Invalid email or password"}}
+      assert_response_schema(conn, 401, "Error")
     end
 
     test "returns 401 for an unknown email", %{conn: conn} do
@@ -35,6 +42,7 @@ defmodule BrekitdownWeb.UserSessionControllerTest do
         )
 
       assert json_response(conn, 401) == %{"errors" => %{"detail" => "Invalid email or password"}}
+      assert_response_schema(conn, 401, "Error")
     end
   end
 
@@ -62,7 +70,7 @@ defmodule BrekitdownWeb.UserSessionControllerTest do
 
     test "requires authentication", %{conn: conn} do
       conn = delete(conn, ~p"/api/users/log-out")
-      assert json_response(conn, 401)
+      assert_response_schema(conn, 401, "Error")
     end
   end
 end

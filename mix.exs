@@ -54,6 +54,7 @@ defmodule Brekitdown.MixProject do
       {:ecto_sql, "~> 3.13"},
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
+      {:open_api_spex, "~> 3.22"},
       {:phoenix, "~> 1.8.7"},
       {:phoenix_ecto, "~> 4.5"},
       {:postgrex, ">= 0.0.0"},
