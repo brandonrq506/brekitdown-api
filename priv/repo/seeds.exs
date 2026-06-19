@@ -13,9 +13,15 @@
 alias Brekitdown.{Accounts, Goals}
 alias Brekitdown.Accounts.Scope
 
-# Demo credentials (password must be >= 12 chars to pass the changeset).
-email = "demo@example.com"
-password = "demopassword123"
+# These seeds create a known demo account, so refuse to run anywhere but dev/test.
+unless Mix.env() in [:dev, :test] do
+  raise "Refusing to run demo seeds in #{Mix.env()} — they create a known demo account."
+end
+
+# Overridable via env so the account can be rotated without editing source.
+# Password must be >= 12 chars to pass the changeset.
+email = System.get_env("SEED_USER_EMAIL", "demo@example.com")
+password = System.get_env("SEED_USER_PASSWORD", "demopassword123")
 
 goals = [
   %{name: "Learn to use Claude", description: "Become more efficient and valuable at my job"},
@@ -32,7 +38,7 @@ case Accounts.get_user_by_email(email) do
       {:ok, _goal} = Goals.create_goal(scope, attrs)
     end
 
-    IO.puts("Seeded user #{email} (password: #{password}) with #{length(goals)} goals.")
+    IO.puts("Seeded user #{email} with #{length(goals)} goals.")
 
   _user ->
     IO.puts("Seed user #{email} already exists — skipping.")
