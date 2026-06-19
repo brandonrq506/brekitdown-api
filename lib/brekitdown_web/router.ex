@@ -39,6 +39,7 @@ defmodule BrekitdownWeb.Router do
 
       get "/users/me", UserController, :me
       delete "/users/log-out", UserSessionController, :delete
+      resources "/goals", GoalController, except: [:new, :edit]
     end
   end
 

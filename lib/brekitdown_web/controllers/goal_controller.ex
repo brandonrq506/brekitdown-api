@@ -1,0 +1,113 @@
+defmodule BrekitdownWeb.GoalController do
+  use BrekitdownWeb, :controller
+  use OpenApiSpex.ControllerSpecs
+
+  alias Brekitdown.Goals
+  alias Brekitdown.Goals.Goal
+  alias BrekitdownWeb.Schemas.{ChangesetError, Error, GoalRequest, GoalResponse, GoalsResponse}
+
+  action_fallback BrekitdownWeb.FallbackController
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: BrekitdownWeb.ValidationErrorPlug
+
+  tags(["goals"])
+
+  operation(:index,
+    summary: "List the current user's goals",
+    security: [%{"bearer" => []}],
+    responses: [
+      ok: {"The user's goals", "application/json", GoalsResponse},
+      unauthorized: {"Unauthorized", "application/json", Error}
+    ]
+  )
+
+  def index(conn, _params) do
+    goals = Goals.list_goals(conn.assigns.current_scope)
+    render(conn, :index, goals: goals)
+  end
+
+  operation(:create,
+    summary: "Create a goal",
+    security: [%{"bearer" => []}],
+    request_body: {"Goal attributes", "application/json", GoalRequest},
+    responses: [
+      created: {"Goal created", "application/json", GoalResponse},
+      unprocessable_entity: {"Validation errors", "application/json", ChangesetError},
+      unauthorized: {"Unauthorized", "application/json", Error}
+    ]
+  )
+
+  def create(conn, _params) do
+    %GoalRequest{goal: goal_params} = OpenApiSpex.body_params(conn)
+
+    with {:ok, %Goal{} = goal} <- Goals.create_goal(conn.assigns.current_scope, goal_params) do
+      conn
+      |> put_status(:created)
+      |> put_resp_header("location", ~p"/api/goals/#{goal}")
+      |> render(:show, goal: goal)
+    end
+  end
+
+  operation(:show,
+    summary: "Get a goal by reference_xid",
+    security: [%{"bearer" => []}],
+    parameters: [
+      id: [in: :path, type: :string, required: true, description: "The goal's reference_xid"]
+    ],
+    responses: [
+      ok: {"The goal", "application/json", GoalResponse},
+      not_found: {"Not found", "application/json", Error},
+      unauthorized: {"Unauthorized", "application/json", Error}
+    ]
+  )
+
+  def show(conn, %{id: id}) do
+    goal = Goals.get_goal!(conn.assigns.current_scope, id)
+    render(conn, :show, goal: goal)
+  end
+
+  operation(:update,
+    summary: "Update a goal",
+    security: [%{"bearer" => []}],
+    parameters: [
+      id: [in: :path, type: :string, required: true, description: "Goal reference_xid"]
+    ],
+    request_body: {"Goal params", "application/json", GoalRequest},
+    responses: [
+      ok: {"Goal updated", "application/json", GoalResponse},
+      unprocessable_entity: {"Validation errors", "application/json", ChangesetError},
+      not_found: {"Not found", "application/json", Error},
+      unauthorized: {"Unauthorized", "application/json", Error}
+    ]
+  )
+
+  def update(conn, %{id: id}) do
+    %GoalRequest{goal: goal_params} = OpenApiSpex.body_params(conn)
+
+    goal = Goals.get_goal!(conn.assigns.current_scope, id)
+
+    with {:ok, %Goal{} = goal} <- Goals.update_goal(conn.assigns.current_scope, goal, goal_params) do
+      render(conn, :show, goal: goal)
+    end
+  end
+
+  operation(:delete,
+    summary: "Delete a goal",
+    security: [%{"bearer" => []}],
+    parameters: [
+      id: [in: :path, type: :string, required: true, description: "Goal reference_xid"]
+    ],
+    responses: [
+      no_content: "Goal deleted",
+      not_found: {"Not found", "application/json", Error},
+      unauthorized: {"Unauthorized", "application/json", Error}
+    ]
+  )
+
+  def delete(conn, %{id: id}) do
+    goal = Goals.get_goal!(conn.assigns.current_scope, id)
+
+    with {:ok, %Goal{}} <- Goals.delete_goal(conn.assigns.current_scope, goal) do
+      send_resp(conn, :no_content, "")
+    end
+  end
+end
