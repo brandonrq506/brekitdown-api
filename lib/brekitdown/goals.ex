@@ -63,6 +63,22 @@ defmodule Brekitdown.Goals do
   end
 
   @doc """
+  Gets a goal.
+
+  ## Examples
+
+      iex> get_goal(scope, "550e8400-e29b-41d4-a716-446655440000")
+      %Goal{}
+
+      iex> get_goal(scope, "550e8400-e29b-41d4-a716-446655440001")
+      nil
+
+  """
+  def get_goal(%Scope{} = scope, reference_xid) do
+    Repo.get_by(Goal, reference_xid: reference_xid, user_id: scope.user.id)
+  end
+
+  @doc """
   Creates a goal.
 
   ## Examples
