@@ -12,7 +12,7 @@ defmodule Brekitdown.TasksFixtures do
       Enum.into(attrs, %{
         name: "Task 1",
         status: :scheduled,
-        due_at: DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
+        due_at: DateTime.utc_now() |> DateTime.shift(day: 1) |> DateTime.truncate(:second)
       })
 
     {:ok, task} = Brekitdown.Tasks.create_task(scope, attrs)

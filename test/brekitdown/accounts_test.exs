@@ -104,7 +104,7 @@ defmodule Brekitdown.AccountsTest do
     end
 
     test "carries the user's authenticated_at into the token", %{user: user} do
-      user = %{user | authenticated_at: DateTime.add(DateTime.utc_now(:second), -3600)}
+      user = %{user | authenticated_at: DateTime.shift(DateTime.utc_now(:second), minute: -60)}
       token = Accounts.generate_user_session_token(user)
       assert user_token = Repo.get_by(UserToken, token: token)
       assert user_token.authenticated_at == user.authenticated_at

@@ -96,7 +96,7 @@ defmodule Brekitdown.TasksTest do
     test "updates name and due_at" do
       scope = user_scope_fixture()
       task = task_fixture(scope)
-      new_due = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
+      new_due = DateTime.utc_now() |> DateTime.shift(day: 2) |> DateTime.truncate(:second)
 
       assert {:ok, updated} = Tasks.update_task(scope, task, %{name: "renamed", due_at: new_due})
       assert updated.name == "renamed"
