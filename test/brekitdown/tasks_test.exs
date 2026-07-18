@@ -1,12 +1,15 @@
 defmodule Brekitdown.TasksTest do
   use Brekitdown.DataCase
 
+  alias Brekitdown.Tags
+  alias Brekitdown.Tags.{Tag, TaskTag}
   alias Brekitdown.Tasks
   alias Brekitdown.Tasks.Task
 
   import Brekitdown.AccountsFixtures, only: [user_scope_fixture: 0]
   import Brekitdown.TasksFixtures
   import Brekitdown.GoalsFixtures
+  import Brekitdown.TagsFixtures
 
   describe "list_tasks/1" do
     test "returns only the scoped user's tasks" do
@@ -159,5 +162,111 @@ defmodule Brekitdown.TasksTest do
     scope = user_scope_fixture()
     task = task_fixture(scope)
     assert %Ecto.Changeset{} = Tasks.change_task(scope, task)
+  end
+
+  describe "attach_tag/4" do
+    test "creates the tag and links it to the task" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope)
+
+      assert {:ok, task} = Tasks.attach_tag(scope, task, "Work", [:tags])
+      assert [%Tag{name: "Work"}] = task.tags
+    end
+
+    test "reuses an existing tag instead of duplicating it" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope)
+      {:ok, existing} = Tags.create_tag(scope, %{name: "Work"})
+
+      assert {:ok, task} = Tasks.attach_tag(scope, task, "work", [:tags])
+      assert [%Tag{id: id}] = task.tags
+      assert id == existing.id
+      assert Repo.aggregate(Tag, :count) == 1
+    end
+
+    test "is idempotent — attaching the same tag twice keeps one link" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope)
+
+      assert {:ok, _} = Tasks.attach_tag(scope, task, "Work")
+      assert {:ok, _} = Tasks.attach_tag(scope, task, "Work")
+      assert Repo.aggregate(TaskTag, :count) == 1
+    end
+
+    test "rejects a blank tag name" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope)
+      assert {:error, %Ecto.Changeset{}} = Tasks.attach_tag(scope, task, "   ")
+    end
+
+    test "with a non-owner scope raises" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope)
+      assert_raise MatchError, fn -> Tasks.attach_tag(user_scope_fixture(), task, "Work") end
+    end
+  end
+
+  describe "detach_tag/3" do
+    test "removes the link but keeps the tag" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope)
+      {:ok, _} = Tasks.attach_tag(scope, task, "Work")
+      {:ok, tag} = Tags.find_or_create_tag(scope, "Work")
+
+      assert :ok = Tasks.detach_tag(scope, task, tag.reference_xid)
+      assert Repo.aggregate(TaskTag, :count) == 0
+      assert Tags.get_tag!(scope, tag.reference_xid).id == tag.id
+    end
+
+    test "is a no-op when the tag is not attached" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope)
+      tag = tag_fixture(scope)
+      assert :ok = Tasks.detach_tag(scope, task, tag.reference_xid)
+    end
+
+    test "raises for another user's tag reference" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope)
+      other_tag = tag_fixture(user_scope_fixture())
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Tasks.detach_tag(scope, task, other_tag.reference_xid)
+      end
+    end
+
+    test "with a non-owner scope raises" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope)
+      tag = tag_fixture(scope)
+
+      assert_raise MatchError, fn ->
+        Tasks.detach_tag(user_scope_fixture(), task, tag.reference_xid)
+      end
+    end
+  end
+
+  describe "tagging cascades" do
+    test "deleting a task removes its tag links but keeps the tags" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope)
+      {:ok, _} = Tasks.attach_tag(scope, task, "Work")
+      {:ok, tag} = Tags.find_or_create_tag(scope, "Work")
+
+      assert {:ok, _} = Tasks.delete_task(scope, task)
+      assert Repo.aggregate(TaskTag, :count) == 0
+      assert Tags.get_tag!(scope, tag.reference_xid).id == tag.id
+    end
+
+    test "deleting a tag removes its links but keeps the tasks" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope)
+      {:ok, _} = Tasks.attach_tag(scope, task, "Work")
+      {:ok, tag} = Tags.find_or_create_tag(scope, "Work")
+
+      assert {:ok, _} = Tags.delete_tag(scope, tag)
+      assert Repo.aggregate(TaskTag, :count) == 0
+      assert Tasks.get_task!(scope, task.reference_xid).id == task.id
+    end
   end
 end

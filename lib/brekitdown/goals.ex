@@ -63,7 +63,7 @@ defmodule Brekitdown.Goals do
   end
 
   @doc """
-  Gets a goal.
+  Gets a single goal.
 
   ## Examples
 
