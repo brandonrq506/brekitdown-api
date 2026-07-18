@@ -9,7 +9,7 @@ defmodule BrekitdownWeb.Schemas.Tag do
     type: :object,
     properties: %{
       reference_xid: %Schema{type: :string, format: :uuid},
-      name: %Schema{type: :string, maxLength: 100}
+      name: %Schema{type: :string, maxLength: 50}
     },
     required: [:reference_xid, :name],
     example: %{
