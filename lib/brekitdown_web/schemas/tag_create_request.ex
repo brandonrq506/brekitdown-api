@@ -1,5 +1,5 @@
 defmodule BrekitdownWeb.Schemas.TagCreateRequest do
-  @moduledoc "Tag creation request envelope: %{data: TagCreateRequestData}."
+  @moduledoc "Tag creation request envelope: %{tag: %{name: string}}."
   require OpenApiSpex
   alias OpenApiSpex.Schema
 
