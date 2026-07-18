@@ -10,6 +10,8 @@ defmodule Brekitdown.Goals.Goal do
     field :reference_xid, Ecto.UUID, read_after_writes: true
     field :user_id, :id
 
+    has_many :tasks, Brekitdown.Tasks.Task, on_delete: :delete_all
+
     timestamps(type: :utc_datetime)
   end
 
