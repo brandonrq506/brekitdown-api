@@ -1,5 +1,5 @@
 defmodule BrekitdownWeb.Schemas.TagUpdateRequest do
-  @moduledoc "Tag update request envelope: %{data: TagUpdateRequestData}."
+  @moduledoc "Tag update request envelope: %{tag: %{name: string}}."
   require OpenApiSpex
   alias OpenApiSpex.Schema
 
