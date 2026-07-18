@@ -41,6 +41,9 @@ defmodule BrekitdownWeb.Router do
       delete "/users/log-out", UserSessionController, :delete
       resources "/goals", GoalController, except: [:new, :edit]
       resources "/tasks", TaskController, except: [:new, :edit]
+      resources "/tags", TagController, except: [:new, :edit]
+      post "/tasks/:task_id/tags", TaskTagController, :create
+      delete "/tasks/:task_id/tags/:id", TaskTagController, :delete
     end
   end
 

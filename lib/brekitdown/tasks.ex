@@ -8,6 +8,8 @@ defmodule Brekitdown.Tasks do
 
   alias Brekitdown.Accounts.Scope
   alias Brekitdown.Goals
+  alias Brekitdown.Tags
+  alias Brekitdown.Tags.TaskTag
   alias Brekitdown.Tasks.Task
 
   @doc """
@@ -128,6 +130,52 @@ defmodule Brekitdown.Tasks do
     true = task.user_id == scope.user.id
 
     Task.create_changeset(task, attrs, scope)
+  end
+
+  @doc """
+  Attaches a tag to a task.
+
+  ## Examples
+
+      iex> attach_tag(scope, task, "tag_name")
+      {:ok, %Task{}}
+
+      iex> attach_tag(scope, task, "tag_name")
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def attach_tag(scope, task, name, preload \\ [])
+
+  def attach_tag(%Scope{} = scope, %Task{} = task, name, preload) do
+    true = task.user_id == scope.user.id
+
+    with {:ok, tag} <- Tags.find_or_create_tag(scope, name) do
+      Repo.insert(%TaskTag{task_id: task.id, tag_id: tag.id},
+        on_conflict: :nothing,
+        conflict_target: [:task_id, :tag_id]
+      )
+
+      {:ok, Repo.preload(task, preload, force: true)}
+    end
+  end
+
+  @doc """
+  Detaches a tag from a task.
+
+  ## Examples
+
+      iex> detach_tag(scope, task, "550e8400-e29b-41d4-a716-446655440000")
+      :ok
+
+  """
+  def detach_tag(%Scope{} = scope, %Task{} = task, tag_reference_xid) do
+    true = task.user_id == scope.user.id
+    tag = Tags.get_tag!(scope, tag_reference_xid)
+
+    from(tt in TaskTag, where: tt.task_id == ^task.id and tt.tag_id == ^tag.id)
+    |> Repo.delete_all()
+
+    :ok
   end
 
   defp maybe_put_goal(changeset, _scope, nil), do: changeset

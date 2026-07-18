@@ -18,6 +18,8 @@ defmodule Brekitdown.Tasks.Task do
 
     belongs_to :goal, Brekitdown.Goals.Goal
 
+    many_to_many :tags, Brekitdown.Tags.Tag, join_through: Brekitdown.Tags.TaskTag
+
     timestamps(type: :utc_datetime)
   end
 
