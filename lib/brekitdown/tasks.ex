@@ -140,7 +140,7 @@ defmodule Brekitdown.Tasks do
       iex> attach_tag(scope, task, "tag_name")
       {:ok, %Task{}}
 
-      iex> attach_tag(scope, task, "tag_name")
+      iex> attach_tag(scope, task, "   ")
       {:error, %Ecto.Changeset{}}
 
   """
