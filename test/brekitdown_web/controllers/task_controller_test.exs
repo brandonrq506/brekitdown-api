@@ -48,13 +48,15 @@ defmodule BrekitdownWeb.TaskControllerTest do
                "reference_xid" => ref,
                "name" => "Write tests",
                "status" => "in_progress",
-               "goal_reference_xid" => nil
+               "goal_reference_xid" => nil,
+               "parent_reference_xid" => nil
              } = created
 
       # internal columns must never leak
       refute Map.has_key?(created, "id")
       refute Map.has_key?(created, "user_id")
       refute Map.has_key?(created, "goal_id")
+      refute Map.has_key?(created, "parent_id")
 
       conn = get(conn, ~p"/api/tasks/#{ref}")
       assert assert_response_schema(conn, 200, "TaskResponse")["data"]["reference_xid"] == ref
@@ -82,6 +84,53 @@ defmodule BrekitdownWeb.TaskControllerTest do
       assert %{"errors" => %{"goal_reference_xid" => _}} =
                assert_response_schema(conn, 422, "ChangesetError")
     end
+
+    test "creates a child under a parent and exposes its parent_reference_xid", %{
+      conn: conn,
+      scope: scope
+    } do
+      parent = task_fixture(scope)
+
+      conn =
+        post(conn, ~p"/api/tasks",
+          task: %{name: "child", parent_reference_xid: parent.reference_xid}
+        )
+
+      created = assert_response_schema(conn, 201, "TaskResponse")["data"]
+      assert created["parent_reference_xid"] == parent.reference_xid
+      refute Map.has_key?(created, "parent_id")
+    end
+
+    test "rejects a goal_reference_xid different from the parent's with a field error", %{
+      conn: conn,
+      scope: scope
+    } do
+      parent_goal = goal_fixture(scope)
+      other_goal = goal_fixture(scope)
+      parent = task_fixture(scope, %{goal_reference_xid: parent_goal.reference_xid})
+
+      conn =
+        post(conn, ~p"/api/tasks",
+          task: %{
+            name: "child",
+            parent_reference_xid: parent.reference_xid,
+            goal_reference_xid: other_goal.reference_xid
+          }
+        )
+
+      assert %{"errors" => %{"goal_reference_xid" => _}} =
+               assert_response_schema(conn, 422, "ChangesetError")
+    end
+
+    test "rejects an unknown parent_reference_xid with a field error", %{conn: conn} do
+      conn =
+        post(conn, ~p"/api/tasks",
+          task: %{name: "child", parent_reference_xid: Ecto.UUID.generate()}
+        )
+
+      assert %{"errors" => %{"parent_reference_xid" => _}} =
+               assert_response_schema(conn, 422, "ChangesetError")
+    end
   end
 
   describe "show task" do
@@ -90,6 +139,15 @@ defmodule BrekitdownWeb.TaskControllerTest do
     test "404s for another user's task", %{conn: conn} do
       other = task_fixture(user_scope_fixture())
       assert_error_sent 404, fn -> get(conn, ~p"/api/tasks/#{other}") end
+    end
+
+    test "returns the parent_reference_xid of a child task", %{conn: conn, scope: scope} do
+      parent = task_fixture(scope)
+      child = task_fixture(scope, %{parent_reference_xid: parent.reference_xid})
+
+      conn = get(conn, ~p"/api/tasks/#{child}")
+      data = assert_response_schema(conn, 200, "TaskResponse")["data"]
+      assert data["parent_reference_xid"] == parent.reference_xid
     end
   end
 

@@ -13,10 +13,10 @@ defmodule Brekitdown.Tasks.Task do
 
     field :due_at, :utc_datetime
     field :reference_xid, Ecto.UUID, read_after_writes: true
-    field :parent_id, :id
     field :user_id, :id
 
     belongs_to :goal, Brekitdown.Goals.Goal
+    belongs_to :parent, Brekitdown.Tasks.Task
 
     many_to_many :tags, Brekitdown.Tags.Tag, join_through: Brekitdown.Tags.TaskTag
 

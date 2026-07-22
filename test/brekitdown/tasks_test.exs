@@ -21,6 +21,15 @@ defmodule Brekitdown.TasksTest do
       assert [listed] = Tasks.list_tasks(scope)
       assert listed.id == task.id
     end
+
+    test "includes tasks that have a parent" do
+      scope = user_scope_fixture()
+      parent = task_fixture(scope)
+      child = task_fixture(scope, %{parent_reference_xid: parent.reference_xid})
+
+      ids = scope |> Tasks.list_tasks() |> Enum.map(& &1.id) |> Enum.sort()
+      assert ids == Enum.sort([parent.id, child.id])
+    end
   end
 
   describe "get_task!/2" do
@@ -95,6 +104,138 @@ defmodule Brekitdown.TasksTest do
     end
   end
 
+  describe "create_task/2 under a parent" do
+    test "inherits the parent's goal and sets the parent when no goal is sent" do
+      scope = user_scope_fixture()
+      goal = goal_fixture(scope)
+      parent = task_fixture(scope, %{goal_reference_xid: goal.reference_xid})
+
+      assert {:ok, child} =
+               Tasks.create_task(scope, %{
+                 name: "child",
+                 parent_reference_xid: parent.reference_xid
+               })
+
+      assert child.parent_id == parent.id
+      assert child.goal_id == parent.goal_id
+    end
+
+    test "inherits a nil goal from a goal-less parent" do
+      scope = user_scope_fixture()
+      parent = task_fixture(scope)
+
+      assert {:ok, child} =
+               Tasks.create_task(scope, %{
+                 name: "child",
+                 parent_reference_xid: parent.reference_xid
+               })
+
+      assert child.goal_id == nil
+    end
+
+    test "accepts a goal_reference_xid equal to the parent's" do
+      scope = user_scope_fixture()
+      goal = goal_fixture(scope)
+      parent = task_fixture(scope, %{goal_reference_xid: goal.reference_xid})
+
+      assert {:ok, _child} =
+               Tasks.create_task(scope, %{
+                 name: "child",
+                 parent_reference_xid: parent.reference_xid,
+                 goal_reference_xid: goal.reference_xid
+               })
+    end
+
+    test "rejects a goal_reference_xid that differs from the parent's" do
+      scope = user_scope_fixture()
+      parent_goal = goal_fixture(scope)
+      other_goal = goal_fixture(scope)
+      parent = task_fixture(scope, %{goal_reference_xid: parent_goal.reference_xid})
+
+      assert {:error, cs} =
+               Tasks.create_task(scope, %{
+                 name: "child",
+                 parent_reference_xid: parent.reference_xid,
+                 goal_reference_xid: other_goal.reference_xid
+               })
+
+      assert %{
+               goal_reference_xid: [
+                 "must match the parent's goal; a child inherits its parent's goal"
+               ]
+             } = errors_on(cs)
+    end
+
+    test "rejects an unknown parent_reference_xid" do
+      scope = user_scope_fixture()
+
+      assert {:error, cs} =
+               Tasks.create_task(scope, %{
+                 name: "child",
+                 parent_reference_xid: Ecto.UUID.generate()
+               })
+
+      assert %{parent_reference_xid: ["does not exist"]} = errors_on(cs)
+    end
+
+    test "hides another user's task when used as a parent" do
+      scope = user_scope_fixture()
+      other_parent = task_fixture(user_scope_fixture())
+
+      assert {:error, cs} =
+               Tasks.create_task(scope, %{
+                 name: "child",
+                 parent_reference_xid: other_parent.reference_xid
+               })
+
+      assert %{parent_reference_xid: ["does not exist"]} = errors_on(cs)
+    end
+  end
+
+  describe "list_children/3" do
+    test "returns only the parent's direct children" do
+      scope = user_scope_fixture()
+      parent = task_fixture(scope)
+      child_a = task_fixture(scope, %{parent_reference_xid: parent.reference_xid})
+      child_b = task_fixture(scope, %{parent_reference_xid: parent.reference_xid})
+      _grandchild = task_fixture(scope, %{parent_reference_xid: child_a.reference_xid})
+      _unrelated = task_fixture(scope)
+
+      ids = scope |> Tasks.list_children(parent) |> Enum.map(& &1.id) |> Enum.sort()
+      assert ids == Enum.sort([child_a.id, child_b.id])
+    end
+
+    test "excludes children when the caller does not own the parent" do
+      owner = user_scope_fixture()
+      intruder = user_scope_fixture()
+      parent = task_fixture(owner)
+      _child = task_fixture(owner, %{parent_reference_xid: parent.reference_xid})
+
+      assert Tasks.list_children(intruder, parent) == []
+    end
+
+    test "returns an empty list when the task has no children" do
+      scope = user_scope_fixture()
+      parent = task_fixture(scope)
+      assert Tasks.list_children(scope, parent) == []
+    end
+  end
+
+  describe "subtree deletion" do
+    test "deleting a parent deletes its descendants at every level" do
+      scope = user_scope_fixture()
+      root = task_fixture(scope)
+      child = task_fixture(scope, %{parent_reference_xid: root.reference_xid})
+      grandchild = task_fixture(scope, %{parent_reference_xid: child.reference_xid})
+
+      assert {:ok, _} = Tasks.delete_task(scope, root)
+
+      for t <- [root, child, grandchild] do
+        assert_raise Ecto.NoResultsError, fn -> Tasks.get_task!(scope, t.reference_xid) end
+      end
+    end
+  end
+
   describe "update_task/3" do
     test "updates name and due_at" do
       scope = user_scope_fixture()
@@ -156,6 +297,17 @@ defmodule Brekitdown.TasksTest do
 
     assert {:ok, _} = Brekitdown.Goals.delete_goal(scope, goal)
     assert_raise Ecto.NoResultsError, fn -> Tasks.get_task!(scope, task.reference_xid) end
+  end
+
+  test "deleting a goal also deletes child tasks under an attached parent" do
+    scope = user_scope_fixture()
+    goal = goal_fixture(scope)
+    parent = task_fixture(scope, %{goal_reference_xid: goal.reference_xid})
+    child = task_fixture(scope, %{parent_reference_xid: parent.reference_xid})
+
+    assert {:ok, _} = Brekitdown.Goals.delete_goal(scope, goal)
+    assert_raise Ecto.NoResultsError, fn -> Tasks.get_task!(scope, parent.reference_xid) end
+    assert_raise Ecto.NoResultsError, fn -> Tasks.get_task!(scope, child.reference_xid) end
   end
 
   test "change_task/2 returns a changeset" do

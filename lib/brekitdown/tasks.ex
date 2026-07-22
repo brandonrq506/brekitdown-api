@@ -30,6 +30,23 @@ defmodule Brekitdown.Tasks do
   end
 
   @doc """
+  Returns the list of child tasks for a given parent task.
+
+  ## Examples
+
+      iex> list_children(scope, parent_task)
+      [%Task{}, ...]
+
+  """
+  def list_children(scope, parent, preload \\ [])
+
+  def list_children(%Scope{} = scope, %Task{} = parent, preload) do
+    Task
+    |> preload(^preload)
+    |> Repo.all_by(user_id: scope.user.id, parent_id: parent.id)
+  end
+
+  @doc """
   Gets a single task.
 
   Raises `Ecto.NoResultsError` if the Task does not exist.
@@ -52,6 +69,27 @@ defmodule Brekitdown.Tasks do
   end
 
   @doc """
+  Gets a single task.
+
+  Returns nil if the Task does not exist.
+
+  ## Examples
+
+      iex> get_task(scope, "550e8400-e29b-41d4-a716-446655440000")
+      %Task{}
+
+      iex> get_task(scope, "550e8400-e29b-41d4-a716-446655440001")
+      nil
+  """
+  def get_task(scope, reference_xid, preload \\ [])
+
+  def get_task(%Scope{} = scope, reference_xid, preload) do
+    Task
+    |> preload(^preload)
+    |> Repo.get_by(reference_xid: reference_xid, user_id: scope.user.id)
+  end
+
+  @doc """
   Creates a task.
 
   ## Examples
@@ -67,7 +105,7 @@ defmodule Brekitdown.Tasks do
     with {:ok, task = %Task{}} <-
            %Task{}
            |> Task.create_changeset(attrs, scope)
-           |> maybe_put_goal(scope, attrs[:goal_reference_xid])
+           |> put_parent_and_goal(scope, attrs[:parent_reference_xid], attrs[:goal_reference_xid])
            |> Repo.insert() do
       {:ok, task}
     end
@@ -184,6 +222,43 @@ defmodule Brekitdown.Tasks do
     case Goals.get_goal(scope, goal_reference_xid) do
       nil -> Ecto.Changeset.add_error(changeset, :goal_reference_xid, "does not exist")
       goal -> Ecto.Changeset.put_change(changeset, :goal_id, goal.id)
+    end
+  end
+
+  defp validate_goal_matches_parent(changeset, _scope, _parent, nil), do: changeset
+
+  defp validate_goal_matches_parent(changeset, scope, parent, goal_reference_xid) do
+    case Goals.get_goal(scope, goal_reference_xid) do
+      nil ->
+        Ecto.Changeset.add_error(changeset, :goal_reference_xid, "does not exist")
+
+      goal ->
+        if parent.goal_id == goal.id do
+          changeset
+        else
+          Ecto.Changeset.add_error(
+            changeset,
+            :goal_reference_xid,
+            "must match the parent's goal; a child inherits its parent's goal"
+          )
+        end
+    end
+  end
+
+  # When no parent, goal is optional and independent.
+  defp put_parent_and_goal(changeset, scope, nil, goal_reference_xid),
+    do: maybe_put_goal(changeset, scope, goal_reference_xid)
+
+  defp put_parent_and_goal(changeset, scope, parent_reference_xid, goal_reference_xid) do
+    case get_task(scope, parent_reference_xid) do
+      nil ->
+        Ecto.Changeset.add_error(changeset, :parent_reference_xid, "does not exist")
+
+      parent ->
+        changeset
+        |> Ecto.Changeset.put_change(:parent_id, parent.id)
+        |> Ecto.Changeset.put_change(:goal_id, parent.goal_id)
+        |> validate_goal_matches_parent(scope, parent, goal_reference_xid)
     end
   end
 end

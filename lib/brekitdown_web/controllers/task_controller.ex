@@ -30,7 +30,7 @@ defmodule BrekitdownWeb.TaskController do
   )
 
   def index(conn, _params) do
-    tasks = Tasks.list_tasks(conn.assigns.current_scope, [:goal, :tags])
+    tasks = Tasks.list_tasks(conn.assigns.current_scope, [:goal, :tags, :parent])
     render(conn, :index, tasks: tasks)
   end
 
@@ -51,7 +51,7 @@ defmodule BrekitdownWeb.TaskController do
     with {:ok, %Task{} = task} <- Tasks.create_task(conn.assigns.current_scope, task_params) do
       conn
       |> put_status(:created)
-      |> render(:show, task: Repo.preload(task, [:goal, :tags]))
+      |> render(:show, task: Repo.preload(task, [:goal, :tags, :parent]))
     end
   end
 
@@ -69,7 +69,7 @@ defmodule BrekitdownWeb.TaskController do
   )
 
   def show(conn, %{id: id}) do
-    task = Tasks.get_task!(conn.assigns.current_scope, id, [:goal, :tags])
+    task = Tasks.get_task!(conn.assigns.current_scope, id, [:goal, :tags, :parent])
     render(conn, :show, task: task)
   end
 
@@ -91,7 +91,7 @@ defmodule BrekitdownWeb.TaskController do
   def update(conn, %{id: id}) do
     %TaskUpdateRequest{task: task_params} = OpenApiSpex.body_params(conn)
 
-    task = Tasks.get_task!(conn.assigns.current_scope, id, [:goal, :tags])
+    task = Tasks.get_task!(conn.assigns.current_scope, id, [:goal, :tags, :parent])
 
     with {:ok, %Task{} = task} <- Tasks.update_task(conn.assigns.current_scope, task, task_params) do
       render(conn, :show, task: task)
@@ -112,7 +112,7 @@ defmodule BrekitdownWeb.TaskController do
   )
 
   def delete(conn, %{id: id}) do
-    task = Tasks.get_task!(conn.assigns.current_scope, id, [:goal, :tags])
+    task = Tasks.get_task!(conn.assigns.current_scope, id, [:goal, :tags, :parent])
 
     with {:ok, %Task{}} <- Tasks.delete_task(conn.assigns.current_scope, task) do
       send_resp(conn, :no_content, "")
