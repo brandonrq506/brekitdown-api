@@ -16,7 +16,8 @@ defmodule BrekitdownWeb.Schemas.TaskCreateRequest do
             enum: ["scheduled", "in_progress", "completed", "dropped", "on_hold"]
           },
           due_at: %Schema{type: :string, format: :date_time, nullable: true},
-          goal_reference_xid: %Schema{type: :string, format: :uuid, nullable: true}
+          goal_reference_xid: %Schema{type: :string, format: :uuid, nullable: true},
+          parent_reference_xid: %Schema{type: :string, format: :uuid, nullable: true}
         },
         required: [:name]
       }

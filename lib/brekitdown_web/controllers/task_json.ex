@@ -20,12 +20,16 @@ defmodule BrekitdownWeb.TaskJSON do
       status: task.status,
       due_at: task.due_at,
       goal_reference_xid: goal_reference_xid(task.goal),
+      parent_reference_xid: parent_reference_xid(task.parent),
       tags: tags(task.tags)
     }
   end
 
   defp goal_reference_xid(%Goal{reference_xid: ref}), do: ref
   defp goal_reference_xid(_), do: nil
+
+  defp parent_reference_xid(%Task{reference_xid: ref}), do: ref
+  defp parent_reference_xid(_), do: nil
 
   defp tags(tags) when is_list(tags) do
     for %Tag{} = tag <- tags do
