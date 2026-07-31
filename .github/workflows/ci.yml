@@ -70,7 +70,7 @@ jobs:
         id: beam
         uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
-          version-file: .tool-versions # single source of truth (Elixir 1.19.1 / OTP 28.1.1)
+          version-file: .tool-versions # single source of truth
           version-type: strict
 
       - name: Cache deps and _build

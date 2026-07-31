@@ -5,7 +5,7 @@ defmodule Brekitdown.MixProject do
     [
       app: :brekitdown,
       version: "0.1.0",
-      elixir: "~> 1.15",
+      elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
