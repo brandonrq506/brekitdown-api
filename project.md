@@ -2,18 +2,22 @@
 
 ## What is
 
-Sendero is a pet project app which serves as practice to learn and experiment with technologies and pattenrs.
+Sendero is a pet project app which serves as practice to learn and experiment with technologies and patterns.
+The main purpose of this project is to learn and practice Elixir/Phoenix, as well as improve my AI usage.
 Despite being a pet project, it follows enterprise-grade patterns and best practices.
 The reason is simple: This project is practice, and you must practice perfection, not bad habits.
+
+This codebase is api-only, and the frontend is a separate project.
+Anything that looks like a frontend feature here is either a mistake, or something added by generators.
 
 ## What it consists of
 
 Sendero is a Goals app.
-It has primitives like `Goals`, `Tasks`, `TimeEntries`.
+It has primitives like `Users`, `Goals`, `Tasks`, `Tags` and `TimeEntries`.
 
-At the core of the application is an AI agent.
-This agent will help you break down tasks into smaller bite-size tasks to reduce mental overlaod and anxiety.
-This agent will also learn user patterns, energy level and motiviation mechanisms, and will use it to recommend tasks based on muti-dimensional criteria, such as: time of the day, energy level, motivation level, task due date, priority, etc.
+At the core of the application is an AI agent (Not yet implemented).
+This agent will help you break down tasks into smaller bite-size tasks to reduce mental overload and anxiety.
+This agent will also learn user patterns, energy level and motivation mechanisms, and will use it to recommend tasks based on multi-dimensional criteria, such as: time of the day, energy level, motivation level, task due date, priority, etc.
 
 ## What's made of
 
@@ -28,7 +32,9 @@ This agent will also learn user patterns, energy level and motiviation mechanism
 ## Progress
 
 - Project has been created.
-- Auth in progress (`users` table). See `auth-discussion.md`.
+- Auth is now working, although it only uses Bearer tokens for now. Eventually we will use Cookies.
+- The project will be hosted on Railway, both backend and frontend.
+- We have implemented the tables `goals`, `tasks` and `tags`, we are only missing `time_entries` table to have a complete basic schema.
 
 ## Thoughts
 
@@ -37,13 +43,3 @@ This agent will also learn user patterns, energy level and motiviation mechanism
 ## Notes to myself
 
 - We gotta keep in mind in which layer you are. That defines what you have access and how you need to do things.
-
-## Good AI relevant discussions
-
-- schema-design
-  - /resume 91c2c5dd-fa4e-47a3-a01a-85b73eea9fc8
-  - Talks about how to design the schema using the AI tool for schema design.
-
-- task-lifecycle-policy-design
-  - /resume 8c07b20a-878d-4fef-a173-1e453cb122cd
-  - Talks about scopes and how to scope different features of this project.

@@ -1,4 +1,5 @@
 This is a web application written using the Phoenix web framework.
+This is an api-only Phoenix application, so there are no templates or views. All responses are JSON.
 
 ## Project guidelines
 
