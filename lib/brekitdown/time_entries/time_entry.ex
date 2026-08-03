@@ -1,4 +1,4 @@
-defmodule Brekitdown.Tasks.TimeEntry do
+defmodule Brekitdown.TimeEntries.TimeEntry do
   @moduledoc """
   One interval of work on a task. A nil `ended_at` means the timer is still running.
 
