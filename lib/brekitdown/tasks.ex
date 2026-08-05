@@ -171,6 +171,19 @@ defmodule Brekitdown.Tasks do
   end
 
   @doc """
+  Returns true if the task is a leaf (has no children), false otherwise.
+
+  ## Examples
+
+      iex> leaf?(task)
+      true
+
+  """
+  def leaf?(%Task{} = task) do
+    not Repo.exists?(from t in Task, where: t.parent_id == ^task.id)
+  end
+
+  @doc """
   Attaches a tag to a task.
 
   ## Examples

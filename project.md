@@ -34,7 +34,11 @@ This agent will also learn user patterns, energy level and motivation mechanisms
 - Project has been created.
 - Auth is now working, although it only uses Bearer tokens for now. Eventually we will use Cookies.
 - The project will be hosted on Railway, both backend and frontend.
-- We have implemented the tables `goals`, `tasks` and `tags`, we are only missing `time_entries` table to have a complete basic schema.
+- We have implemented the tables `goals`, `tasks`, `tags` and `time_entries` — the basic schema is complete.
+- `time_entries` CRUD is shipped
+  - Nested under tasks: `/api/tasks/:task_id/time_entries`.
+  - A time entry with a null `ended_at` is the running timer.
+  - Task-status side effects and the entries-vs-subtasks reverse guard are follow-ups.
 
 ## Thoughts
 
