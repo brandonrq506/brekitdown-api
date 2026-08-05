@@ -8,6 +8,7 @@ defmodule BrekitdownWeb.TimeEntryController do
 
   alias BrekitdownWeb.Schemas.{
     ChangesetError,
+    ConflictError,
     Error,
     TimeEntriesResponse,
     TimeEntryCreateRequest,
@@ -40,10 +41,6 @@ defmodule BrekitdownWeb.TimeEntryController do
     render(conn, :index, time_entries: TimeEntries.list_time_entries_by_task(scope, task))
   end
 
-  # def show(conn, %{task_id: task_xid, id: time_entry_id}) do
-  # Missing implementation
-  # end
-
   operation(:create,
     summary: "Create a time entry for a task",
     security: [%{"bearer" => []}],
@@ -54,7 +51,7 @@ defmodule BrekitdownWeb.TimeEntryController do
     responses: [
       created: {"Time entry created", "application/json", TimeEntryResponse},
       unprocessable_entity: {"Validation errors", "application/json", ChangesetError},
-      conflict: {"The task's state forbids this", "application/json", Error},
+      conflict: {"The task's state forbids this", "application/json", ConflictError},
       not_found: {"Not found", "application/json", Error},
       unauthorized: {"Unauthorized", "application/json", Error}
     ]
@@ -90,7 +87,7 @@ defmodule BrekitdownWeb.TimeEntryController do
     responses: [
       ok: {"Time entry updated", "application/json", TimeEntryResponse},
       unprocessable_entity: {"Validation errors", "application/json", ChangesetError},
-      conflict: {"The task's state forbids this", "application/json", Error},
+      conflict: {"The task's state forbids this", "application/json", ConflictError},
       not_found: {"Not found", "application/json", Error},
       unauthorized: {"Unauthorized", "application/json", Error}
     ]

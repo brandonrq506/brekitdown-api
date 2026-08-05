@@ -12,6 +12,11 @@ defmodule BrekitdownWeb.ErrorJSON do
   #   %{errors: %{detail: "Internal Server Error"}}
   # end
 
+  # 409s carry a stable machine-readable code alongside the human-readable detail.
+  def render("409.json", %{code: code, detail: detail}) do
+    %{errors: %{code: code, detail: detail}}
+  end
+
   # By default, Phoenix returns the status message from
   # the template name. For example, "404.json" becomes
   # "Not Found".
