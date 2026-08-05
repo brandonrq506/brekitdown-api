@@ -1,0 +1,181 @@
+defmodule Brekitdown.TimeEntries do
+  @moduledoc """
+  The TimeEntries context.
+  """
+
+  import Ecto.Query, warn: false
+  alias Brekitdown.Repo
+
+  alias Brekitdown.Accounts.Scope
+  alias Brekitdown.Tasks
+  alias Brekitdown.Tasks.Task
+  alias Brekitdown.TimeEntries.TimeEntry
+
+  @doc """
+  Returns the list of time_entries for a task.
+
+  ## Examples
+
+      iex> list_time_entries_by_task(scope, task)
+      [%TimeEntry{}, ...]
+
+  """
+  def list_time_entries_by_task(%Scope{} = scope, %Task{} = task) do
+    TimeEntry
+    |> where([te], te.task_id == ^task.id)
+    |> order_by([te], asc: te.started_at)
+    |> Repo.all_by(user_id: scope.user.id)
+  end
+
+  @doc """
+  Gets a single time_entry for a task.
+
+  Raises `Ecto.NoResultsError` if the TimeEntry does not exist.
+
+  ## Examples
+
+      iex> get_time_entry!(scope, task, "550e8400-e29b-41d4-a716-446655440000")
+      %TimeEntry{}
+
+      iex> get_time_entry!(scope, task, "550e8400-e29b-41d4-a716-446655440001")
+      ** (Ecto.NoResultsError)
+
+  """
+  def get_time_entry!(%Scope{} = scope, %Task{} = task, reference_xid) do
+    Repo.get_by!(TimeEntry,
+      user_id: scope.user.id,
+      task_id: task.id,
+      reference_xid: reference_xid
+    )
+  end
+
+  @doc """
+  Gets a single time_entry for a task.
+
+  Returns nil if the TimeEntry does not exist.
+
+  ## Examples
+
+      iex> get_time_entry(scope, task, "550e8400-e29b-41d4-a716-446655440000")
+      %TimeEntry{}
+
+      iex> get_time_entry(scope, task, "550e8400-e29b-41d4-a716-446655440001")
+      nil
+
+  """
+  def get_time_entry(%Scope{} = scope, %Task{} = task, reference_xid) do
+    Repo.get_by(TimeEntry,
+      user_id: scope.user.id,
+      task_id: task.id,
+      reference_xid: reference_xid
+    )
+  end
+
+  @doc """
+  Creates a time_entry for a task.
+
+  ## Examples
+
+      iex> create_time_entry(scope, task, %{field: value})
+      {:ok, %TimeEntry{}}
+
+      iex> create_time_entry(scope, task, %{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def create_time_entry(%Scope{} = scope, %Task{} = task, attrs) do
+    true = task.user_id == scope.user.id
+
+    changeset = TimeEntry.create_changeset(%TimeEntry{}, attrs, scope, task)
+
+    with :ok <- ensure_leaf(task),
+         :ok <- ensure_no_open_entry(changeset, task.id) do
+      Repo.insert(changeset)
+    end
+  end
+
+  @doc """
+  Updates a time_entry for a task.
+
+  ## Examples
+
+      iex> update_time_entry(scope, time_entry, %{field: new_value})
+      {:ok, %TimeEntry{}}
+
+      iex> update_time_entry(scope, time_entry, %{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def update_time_entry(%Scope{} = scope, %TimeEntry{} = time_entry, attrs) do
+    true = time_entry.user_id == scope.user.id
+
+    changeset = TimeEntry.update_changeset(time_entry, attrs)
+
+    with :ok <- ensure_no_open_entry(changeset, time_entry.task_id, time_entry.id) do
+      Repo.update(changeset)
+    end
+  end
+
+  @doc """
+  Deletes a time_entry from a task.
+
+  ## Examples
+
+      iex> delete_time_entry(scope, time_entry)
+      {:ok, %TimeEntry{}}
+
+      iex> delete_time_entry(scope, time_entry)
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def delete_time_entry(%Scope{} = scope, %TimeEntry{} = time_entry) do
+    true = time_entry.user_id == scope.user.id
+
+    Repo.delete(time_entry)
+  end
+
+  @doc """
+  Returns true when a task has at least one time entry.
+
+  ## Examples
+
+      iex> task_has_entries?(task)
+      true
+
+  """
+  def task_has_entries?(%Task{} = task) do
+    TimeEntry
+    |> where([te], te.task_id == ^task.id)
+    |> Repo.exists?()
+  end
+
+  defp ensure_leaf(%Task{} = task) do
+    case Tasks.leaf?(task) do
+      true -> :ok
+      false -> {:error, :not_a_leaf_task}
+    end
+  end
+
+  # A task may have at most one running entry. Checked here rather than left to
+  # :time_entries_one_open_per_task_index so the failure is a 409 on task state,
+  # not a 422 on a column the client never sent. The index stays as the backstop.
+  defp ensure_no_open_entry(changeset, task_id, except_id \\ nil) do
+    if entry_open?(changeset) and open_entry_exists?(task_id, except_id) do
+      {:error, :entry_already_running}
+    else
+      :ok
+    end
+  end
+
+  defp entry_open?(changeset), do: is_nil(Ecto.Changeset.get_field(changeset, :ended_at))
+
+  defp open_entry_exists?(task_id, except_id) do
+    TimeEntry
+    |> where([te], te.task_id == ^task_id and is_nil(te.ended_at))
+    |> exclude_entry(except_id)
+    |> Repo.exists?()
+  end
+
+  defp exclude_entry(query, nil), do: query
+  defp exclude_entry(query, id), do: where(query, [te], te.id != ^id)
+end
