@@ -27,9 +27,7 @@ defmodule BrekitdownWeb.Schemas.ConflictError do
     example: %{
       errors: %{
         code: "entry_already_running",
-        detail:
-          "This task already has a time entry that has not ended. " <>
-            "Stop it before starting or resuming another."
+        detail: "This task already has a time entry that has not ended."
       }
     }
   })
