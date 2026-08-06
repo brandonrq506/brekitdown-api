@@ -11,7 +11,7 @@ defmodule BrekitdownWeb.Schemas.TaskUpdateRequest do
         type: :object,
         properties: %{
           name: %Schema{type: :string, maxLength: 100},
-          due_at: %Schema{type: :string, format: :date_time, nullable: true}
+          due_at: %Schema{type: :string, format: :"date-time", nullable: true}
         },
         required: [:name]
       }
