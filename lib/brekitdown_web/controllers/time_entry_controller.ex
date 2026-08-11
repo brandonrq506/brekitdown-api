@@ -130,7 +130,7 @@ defmodule BrekitdownWeb.TimeEntryController do
     task = Tasks.get_task!(scope, task_xid)
     time_entry = TimeEntries.get_time_entry!(scope, task, time_entry_xid)
 
-    with {:ok, %TimeEntry{}} <- TimeEntries.delete_time_entry(scope, time_entry) do
+    with {:ok, %TimeEntry{}} <- TimeEntries.delete_time_entry(scope, task, time_entry) do
       send_resp(conn, :no_content, "")
     end
   end

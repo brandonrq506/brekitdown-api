@@ -297,6 +297,20 @@ defmodule BrekitdownWeb.TimeEntryControllerTest do
       assert assert_response_schema(conn, 200, "TimeEntriesResponse")["data"] == []
     end
 
+    test "204 and an in_progress task resets to scheduled", %{
+      conn: conn,
+      scope: scope,
+      user: user
+    } do
+      task = task_fixture(scope, %{status: :in_progress})
+      entry = time_entry_fixture(scope, task)
+
+      assert response(delete(conn, ~p"/api/tasks/#{task}/time_entries/#{entry}"), 204)
+
+      conn = get(authed_conn(user), ~p"/api/tasks/#{task}")
+      assert assert_response_schema(conn, 200, "TaskResponse")["data"]["status"] == "scheduled"
+    end
+
     test "404 for the right entry under the wrong task", %{conn: conn, scope: scope, entry: entry} do
       other_task = task_fixture(scope, %{name: "Other task"})
 
