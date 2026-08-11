@@ -229,6 +229,14 @@ defmodule Brekitdown.Tasks do
     :ok
   end
 
+  def update_status(%Scope{} = scope, %Task{} = task, status) do
+    true = task.user_id == scope.user.id
+
+    task
+    |> Task.status_changeset(status)
+    |> Repo.update()
+  end
+
   defp maybe_put_goal(changeset, _scope, nil), do: changeset
 
   defp maybe_put_goal(changeset, scope, goal_reference_xid) do

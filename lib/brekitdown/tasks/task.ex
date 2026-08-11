@@ -1,5 +1,7 @@
 defmodule Brekitdown.Tasks.Task do
   use Ecto.Schema
+
+  import Brekitdown.Tasks.TaskStatuses, only: [is_task_status: 1]
   import Ecto.Changeset
 
   alias Brekitdown.Tasks.TaskStatuses
@@ -43,5 +45,10 @@ defmodule Brekitdown.Tasks.Task do
     |> cast(attrs, [:name, :due_at])
     |> validate_length(:name, max: 100)
     |> validate_required([:name])
+  end
+
+  @doc false
+  def status_changeset(task, status) when is_task_status(status) do
+    change(task, status: status)
   end
 end
