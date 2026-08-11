@@ -133,14 +133,12 @@ defmodule Brekitdown.TimeEntries do
     true = time_entry.user_id == scope.user.id
     true = time_entry.task_id == task.id
 
-    """
-    If the task has more entries, leave its status as-is.
-    If the task has no more entries, then:
-      :dropped -> :dropped
-      :on_hold -> :on_hold
-      :completed -> :completed
-      :in_progress -> :scheduled
-    """
+    # If the task has more entries, leave its status as-is.
+    # If the task has no more entries, then:
+    #   :dropped -> :dropped
+    #   :on_hold -> :on_hold
+    #   :completed -> :completed
+    #   :in_progress -> :scheduled
 
     Repo.transact(fn ->
       with {:ok, time_entry} <- Repo.delete(time_entry),
