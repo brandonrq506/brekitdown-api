@@ -9,6 +9,7 @@ defmodule Brekitdown.TimeEntries do
   alias Brekitdown.Accounts.Scope
   alias Brekitdown.Tasks
   alias Brekitdown.Tasks.Task
+  alias Brekitdown.Tasks.TaskStatuses
   alias Brekitdown.TimeEntries.TimeEntry
 
   @doc """
@@ -117,7 +118,7 @@ defmodule Brekitdown.TimeEntries do
   end
 
   @doc """
-  Deletes a time_entry from a task.
+  Deletes a time_entry from a task and updates the task status if necessary.
 
   ## Examples
 
@@ -128,10 +129,26 @@ defmodule Brekitdown.TimeEntries do
       {:error, %Ecto.Changeset{}}
 
   """
-  def delete_time_entry(%Scope{} = scope, %TimeEntry{} = time_entry) do
+  def delete_time_entry(%Scope{} = scope, %Task{} = task, %TimeEntry{} = time_entry) do
     true = time_entry.user_id == scope.user.id
+    true = time_entry.task_id == task.id
 
-    Repo.delete(time_entry)
+    """
+    If the task has more entries, leave its status as-is.
+    If the task has no more entries, then:
+      :dropped -> :dropped
+      :on_hold -> :on_hold
+      :completed -> :completed
+      :in_progress -> :scheduled
+    """
+
+    Repo.transact(fn ->
+      with {:ok, time_entry} <- Repo.delete(time_entry),
+           status = status_after_delete(task.status, task_has_entries?(task)),
+           {:ok, _task} <- Tasks.update_status(scope, task, status) do
+        {:ok, time_entry}
+      end
+    end)
   end
 
   @doc """
@@ -178,4 +195,7 @@ defmodule Brekitdown.TimeEntries do
 
   defp exclude_entry(query, nil), do: query
   defp exclude_entry(query, id), do: where(query, [te], te.id != ^id)
+
+  defp status_after_delete(:in_progress, false), do: TaskStatuses.default()
+  defp status_after_delete(status, _), do: status
 end
