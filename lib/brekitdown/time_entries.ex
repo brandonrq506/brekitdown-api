@@ -122,10 +122,10 @@ defmodule Brekitdown.TimeEntries do
 
   ## Examples
 
-      iex> delete_time_entry(scope, time_entry)
+      iex> delete_time_entry(scope, task, time_entry)
       {:ok, %TimeEntry{}}
 
-      iex> delete_time_entry(scope, time_entry)
+      iex> delete_time_entry(scope, task, time_entry)
       {:error, %Ecto.Changeset{}}
 
   """
