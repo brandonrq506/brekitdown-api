@@ -221,26 +221,59 @@ defmodule Brekitdown.TimeEntriesTest do
     end
   end
 
-  describe "delete_time_entry/2" do
+  describe "delete_time_entry/3" do
     test "deletes the entry and leaves the task's other entries alone" do
       scope = user_scope_fixture()
       task = task_fixture(scope)
       kept = time_entry_fixture(scope, task, %{started_at: hours_ago(5), ended_at: hours_ago(4)})
       doomed = time_entry_fixture(scope, task)
 
-      assert {:ok, %TimeEntry{}} = TimeEntries.delete_time_entry(scope, doomed)
+      assert {:ok, %TimeEntry{}} = TimeEntries.delete_time_entry(scope, task, doomed)
 
       assert TimeEntries.list_time_entries_by_task(scope, task) == [kept]
     end
 
-    test "leaves the task's status untouched" do
+    test "resets an in_progress task to scheduled when no entries remain" do
       scope = user_scope_fixture()
-      task = task_fixture(scope)
+      task = task_fixture(scope, %{status: :in_progress})
       entry = time_entry_fixture(scope, task)
 
-      {:ok, _} = TimeEntries.delete_time_entry(scope, entry)
+      assert {:ok, %TimeEntry{}} = TimeEntries.delete_time_entry(scope, task, entry)
 
-      assert Tasks.get_task!(scope, task.reference_xid).status == task.status
+      assert TimeEntries.list_time_entries_by_task(scope, task) == []
+      assert Tasks.get_task!(scope, task.reference_xid).status == :scheduled
+    end
+
+    test "keeps an in_progress task in progress while entries remain" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope, %{status: :in_progress})
+      kept = time_entry_fixture(scope, task, %{started_at: hours_ago(5), ended_at: hours_ago(4)})
+      doomed = time_entry_fixture(scope, task)
+
+      assert {:ok, %TimeEntry{}} = TimeEntries.delete_time_entry(scope, task, doomed)
+
+      assert TimeEntries.list_time_entries_by_task(scope, task) == [kept]
+      assert Tasks.get_task!(scope, task.reference_xid).status == :in_progress
+    end
+
+    test "leaves a completed task completed when no entries remain" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope, %{status: :completed})
+      entry = time_entry_fixture(scope, task)
+
+      assert {:ok, %TimeEntry{}} = TimeEntries.delete_time_entry(scope, task, entry)
+
+      assert Tasks.get_task!(scope, task.reference_xid).status == :completed
+    end
+
+    test "leaves a dropped task dropped when no entries remain" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope, %{status: :dropped})
+      entry = time_entry_fixture(scope, task)
+
+      assert {:ok, %TimeEntry{}} = TimeEntries.delete_time_entry(scope, task, entry)
+
+      assert Tasks.get_task!(scope, task.reference_xid).status == :dropped
     end
 
     test "raises for another user's entry" do
@@ -250,7 +283,18 @@ defmodule Brekitdown.TimeEntriesTest do
       entry = time_entry_fixture(scope, task)
 
       assert_raise MatchError, fn ->
-        TimeEntries.delete_time_entry(other_scope, entry)
+        TimeEntries.delete_time_entry(other_scope, task, entry)
+      end
+    end
+
+    test "raises when the entry belongs to another task" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope)
+      other_task = task_fixture(scope, %{name: "Other task"})
+      entry = time_entry_fixture(scope, task)
+
+      assert_raise MatchError, fn ->
+        TimeEntries.delete_time_entry(scope, other_task, entry)
       end
     end
   end
