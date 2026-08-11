@@ -2,14 +2,16 @@ defmodule Brekitdown.Tasks.Task do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Brekitdown.Tasks.TaskStatuses
+
   @derive {Phoenix.Param, key: :reference_xid}
 
   schema "tasks" do
     field :name, :string
 
     field :status, Ecto.Enum,
-      values: [:scheduled, :in_progress, :completed, :dropped, :on_hold],
-      default: :scheduled
+      values: TaskStatuses.all(),
+      default: TaskStatuses.default()
 
     field :due_at, :utc_datetime
     field :reference_xid, Ecto.UUID, read_after_writes: true
