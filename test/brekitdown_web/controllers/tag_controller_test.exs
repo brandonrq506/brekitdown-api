@@ -38,6 +38,8 @@ defmodule BrekitdownWeb.TagControllerTest do
       conn = post(conn, ~p"/api/tags", tag: @create_attrs)
       created = assert_response_schema(conn, 201, "TagResponse")["data"]
       assert %{"reference_xid" => _, "name" => "Work"} = created
+      assert is_binary(created["inserted_at"])
+      assert is_binary(created["updated_at"])
       refute Map.has_key?(created, "id")
       refute Map.has_key?(created, "user_id")
     end

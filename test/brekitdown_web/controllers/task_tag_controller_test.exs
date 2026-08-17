@@ -25,7 +25,10 @@ defmodule BrekitdownWeb.TaskTagControllerTest do
       data = assert_response_schema(conn, 200, "TaskResponse")["data"]
 
       assert data["reference_xid"] == task.reference_xid
-      assert [%{"name" => "Work", "reference_xid" => _}] = data["tags"]
+      assert [tag] = data["tags"]
+      assert %{"name" => "Work", "reference_xid" => _} = tag
+      assert is_binary(tag["inserted_at"])
+      assert is_binary(tag["updated_at"])
     end
 
     test "is idempotent — same name (any case) keeps one tag", %{conn: conn, task: task} do

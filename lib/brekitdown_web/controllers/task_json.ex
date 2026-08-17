@@ -21,7 +21,9 @@ defmodule BrekitdownWeb.TaskJSON do
       due_at: task.due_at,
       goal_reference_xid: goal_reference_xid(task.goal),
       parent_reference_xid: parent_reference_xid(task.parent),
-      tags: tags(task.tags)
+      tags: tags(task.tags),
+      inserted_at: task.inserted_at,
+      updated_at: task.updated_at
     }
   end
 
@@ -33,7 +35,12 @@ defmodule BrekitdownWeb.TaskJSON do
 
   defp tags(tags) when is_list(tags) do
     for %Tag{} = tag <- tags do
-      %{reference_xid: tag.reference_xid, name: tag.name}
+      %{
+        reference_xid: tag.reference_xid,
+        name: tag.name,
+        inserted_at: tag.inserted_at,
+        updated_at: tag.updated_at
+      }
     end
   end
 

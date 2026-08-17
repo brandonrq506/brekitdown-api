@@ -15,6 +15,7 @@ defmodule BrekitdownWeb.UserJSON do
       reference_xid: user.reference_xid,
       email: user.email,
       inserted_at: user.inserted_at,
+      updated_at: user.updated_at,
       confirmed_at: user.confirmed_at
     }
   end

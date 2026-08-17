@@ -18,9 +18,11 @@ defmodule BrekitdownWeb.Schemas.Task do
       due_at: %Schema{type: :string, format: :"date-time", nullable: true},
       goal_reference_xid: %Schema{type: :string, format: :uuid, nullable: true},
       parent_reference_xid: %Schema{type: :string, format: :uuid, nullable: true},
-      tags: %Schema{type: :array, items: Tag}
+      tags: %Schema{type: :array, items: Tag},
+      inserted_at: %Schema{type: :string, format: :"date-time"},
+      updated_at: %Schema{type: :string, format: :"date-time"}
     },
-    required: [:reference_xid, :name, :status],
+    required: [:reference_xid, :name, :status, :inserted_at, :updated_at],
     example: %{
       reference_xid: "123e4567-e89b-12d3-a456-426614174000",
       name: "Finish writing the report",
@@ -28,7 +30,9 @@ defmodule BrekitdownWeb.Schemas.Task do
       due_at: "2024-06-30T12:00:00Z",
       goal_reference_xid: "123e4567-e89b-12d3-a456-426614174001",
       parent_reference_xid: "123e4567-e89b-12d3-a456-426614174002",
-      tags: []
+      tags: [],
+      inserted_at: "2024-01-01T12:00:00Z",
+      updated_at: "2024-01-01T12:00:00Z"
     }
   })
 end

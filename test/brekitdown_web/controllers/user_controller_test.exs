@@ -13,6 +13,8 @@ defmodule BrekitdownWeb.UserControllerTest do
       assert %{"user" => body_user} = json_response(conn, 200)
       assert body_user["email"] == user.email
       assert body_user["reference_xid"] == user.reference_xid
+      assert is_binary(body_user["inserted_at"])
+      assert is_binary(body_user["updated_at"])
       refute Map.has_key?(body_user, "id")
       refute Map.has_key?(body_user, "hashed_password")
       assert_response_schema(conn, 200, "UserResponse")

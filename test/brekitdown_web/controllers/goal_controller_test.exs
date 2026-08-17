@@ -49,6 +49,9 @@ defmodule BrekitdownWeb.GoalControllerTest do
                "description" => "some description"
              } = created
 
+      assert is_binary(created["inserted_at"])
+      assert is_binary(created["updated_at"])
+
       # internal columns must never be exposed
       refute Map.has_key?(created, "id")
       refute Map.has_key?(created, "user_id")

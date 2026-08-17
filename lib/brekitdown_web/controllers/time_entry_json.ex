@@ -15,7 +15,9 @@ defmodule BrekitdownWeb.TimeEntryJSON do
     %{
       reference_xid: time_entry.reference_xid,
       started_at: time_entry.started_at,
-      ended_at: time_entry.ended_at
+      ended_at: time_entry.ended_at,
+      inserted_at: time_entry.inserted_at,
+      updated_at: time_entry.updated_at
     }
   end
 end

@@ -52,6 +52,9 @@ defmodule BrekitdownWeb.TaskControllerTest do
                "parent_reference_xid" => nil
              } = created
 
+      assert is_binary(created["inserted_at"])
+      assert is_binary(created["updated_at"])
+
       # internal columns must never leak
       refute Map.has_key?(created, "id")
       refute Map.has_key?(created, "user_id")
