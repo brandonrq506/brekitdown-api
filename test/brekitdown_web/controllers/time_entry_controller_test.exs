@@ -87,6 +87,8 @@ defmodule BrekitdownWeb.TimeEntryControllerTest do
       assert data["started_at"] == started_at
       assert data["ended_at"] == nil
       assert data["reference_xid"]
+      assert is_binary(data["inserted_at"])
+      assert is_binary(data["updated_at"])
 
       refute Map.has_key?(data, "id")
       refute Map.has_key?(data, "user_id")
