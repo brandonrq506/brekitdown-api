@@ -18,7 +18,9 @@ defmodule BrekitdownWeb.TagJSON do
   defp data(%Tag{} = tag) do
     %{
       reference_xid: tag.reference_xid,
-      name: tag.name
+      name: tag.name,
+      inserted_at: tag.inserted_at,
+      updated_at: tag.updated_at
     }
   end
 end
