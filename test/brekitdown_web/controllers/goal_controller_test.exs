@@ -99,6 +99,20 @@ defmodule BrekitdownWeb.GoalControllerTest do
              } = assert_response_schema(conn, 200, "GoalResponse")["data"]
     end
 
+    test "updates only the description when name is omitted", %{conn: conn, goal: goal} do
+      conn = put(conn, ~p"/api/goals/#{goal}", goal: %{description: "updated description"})
+
+      assert %{
+               "name" => "some name",
+               "description" => "updated description"
+             } = assert_response_schema(conn, 200, "GoalResponse")["data"]
+    end
+
+    test "renders errors when no update attributes are provided", %{conn: conn, goal: goal} do
+      conn = put(conn, ~p"/api/goals/#{goal}", goal: %{})
+      assert %{"errors" => _} = assert_response_schema(conn, 422, "ChangesetError")
+    end
+
     test "renders errors when data is invalid", %{conn: conn, goal: goal} do
       conn = put(conn, ~p"/api/goals/#{goal}", goal: @invalid_attrs)
       assert %{"errors" => _} = assert_response_schema(conn, 422, "ChangesetError")
