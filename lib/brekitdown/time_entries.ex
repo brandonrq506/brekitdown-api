@@ -73,7 +73,13 @@ defmodule Brekitdown.TimeEntries do
   end
 
   @doc """
-  Creates a time_entry for a task.
+  Creates a time_entry for a task, and moves the task's status when the new entry says
+  work is happening.
+
+  A running entry (no `ended_at`) claims work is happening *now*, so it puts the task in
+  progress whatever it was. A finished entry only claims work happened, so it starts a
+  task that is still `:scheduled` and leaves a deliberate status alone — logging time
+  against something you dropped does not un-drop it.
 
   ## Examples
 
@@ -91,7 +97,7 @@ defmodule Brekitdown.TimeEntries do
 
     with :ok <- ensure_leaf(task),
          :ok <- ensure_no_open_entry(changeset, task.id) do
-      Repo.insert(changeset)
+      insert_and_update_status(scope, task, changeset)
     end
   end
 
@@ -133,13 +139,6 @@ defmodule Brekitdown.TimeEntries do
     true = time_entry.user_id == scope.user.id
     true = time_entry.task_id == task.id
 
-    # If the task has more entries, leave its status as-is.
-    # If the task has no more entries, then:
-    #   :dropped -> :dropped
-    #   :on_hold -> :on_hold
-    #   :completed -> :completed
-    #   :in_progress -> :scheduled
-
     Repo.transact(fn ->
       with {:ok, time_entry} <- Repo.delete(time_entry),
            status = status_after_delete(task.status, task_has_entries?(task)),
@@ -162,6 +161,19 @@ defmodule Brekitdown.TimeEntries do
     TimeEntry
     |> where([te], te.task_id == ^task.id)
     |> Repo.exists?()
+  end
+
+  # Both writes or neither: an entry the task's status does not reflect is a lie the next
+  # read would tell. Extracted from create_time_entry/3 because inlining it nests
+  # with -> fn -> with, one level past Credo.Check.Refactor.Nesting's max_nesting: 2.
+  defp insert_and_update_status(scope, task, changeset) do
+    Repo.transact(fn ->
+      with {:ok, time_entry} <- Repo.insert(changeset),
+           status = status_after_create(task.status, TimeEntry.state(time_entry)),
+           {:ok, _task} <- Tasks.update_status(scope, task, status) do
+        {:ok, time_entry}
+      end
+    end)
   end
 
   defp ensure_leaf(%Task{} = task) do
@@ -193,6 +205,13 @@ defmodule Brekitdown.TimeEntries do
 
   defp exclude_entry(query, nil), do: query
   defp exclude_entry(query, id), do: where(query, [te], te.id != ^id)
+
+  # Status describes the task now, so only a present-tense claim may override a status the
+  # user chose. `:open` is one; `:closed` is a claim about the past and can only contradict
+  # `:scheduled`, which is itself the claim that nothing has been worked on yet.
+  defp status_after_create(_status, :open), do: :in_progress
+  defp status_after_create(:scheduled, :closed), do: :in_progress
+  defp status_after_create(status, :closed), do: status
 
   defp status_after_delete(:in_progress, false), do: TaskStatuses.default()
   defp status_after_delete(status, _), do: status

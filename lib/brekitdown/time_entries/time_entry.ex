@@ -43,6 +43,20 @@ defmodule Brekitdown.TimeEntries.TimeEntry do
     |> check_constraint(:ended_at, name: :time_entries_ended_at_after_started_at)
   end
 
+  @doc """
+  Whether the entry is still running (`:open`) or finished (`:closed`).
+
+  Derived from `ended_at` rather than stored, so it cannot drift from the timestamps.
+
+  ## Examples
+
+      iex> state(%TimeEntry{ended_at: nil})
+      :open
+
+  """
+  def state(%__MODULE__{ended_at: nil}), do: :open
+  def state(%__MODULE__{}), do: :closed
+
   defp validate_ended_not_before_started(changeset) do
     started_at = get_field(changeset, :started_at)
     ended_at = get_field(changeset, :ended_at)

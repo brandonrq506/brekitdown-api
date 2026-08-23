@@ -229,6 +229,19 @@ defmodule Brekitdown.Tasks do
     :ok
   end
 
+  @doc """
+  Sets a task's status.
+
+  Writing the status the task already has is a no-op: `Repo.update/1` skips the database
+  entirely for a changeset with no changes, so `updated_at` does not move. Callers can
+  therefore apply a status rule unconditionally instead of branching on "did it change?".
+
+  ## Examples
+
+      iex> update_status(scope, task, :in_progress)
+      {:ok, %Task{}}
+
+  """
   def update_status(%Scope{} = scope, %Task{} = task, status) do
     true = task.user_id == scope.user.id
 
