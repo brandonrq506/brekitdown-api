@@ -97,29 +97,34 @@ defmodule Brekitdown.TimeEntries do
 
     with :ok <- ensure_leaf(task),
          :ok <- ensure_no_open_entry(changeset, task.id) do
-      insert_and_update_status(scope, task, changeset)
+      write_and_update_status(scope, task, changeset)
     end
   end
 
   @doc """
-  Updates a time_entry for a task.
+  Updates a time_entry for a task, and moves the task's status by the same rule as
+  `create_time_entry/3`, applied to the entry the edit leaves behind.
+
+  Un-stopping an entry (clearing `ended_at`) means work is being done on it, so it puts the task in progress. Stopping an entry, or correcting its timestamps,
+  claims nothing about the task now and leaves a deliberate status alone.
 
   ## Examples
 
-      iex> update_time_entry(scope, time_entry, %{field: new_value})
+      iex> update_time_entry(scope, task, time_entry, %{field: new_value})
       {:ok, %TimeEntry{}}
 
-      iex> update_time_entry(scope, time_entry, %{field: bad_value})
+      iex> update_time_entry(scope, task, time_entry, %{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_time_entry(%Scope{} = scope, %TimeEntry{} = time_entry, attrs) do
+  def update_time_entry(%Scope{} = scope, %Task{} = task, %TimeEntry{} = time_entry, attrs) do
     true = time_entry.user_id == scope.user.id
+    true = time_entry.task_id == task.id
 
     changeset = TimeEntry.update_changeset(time_entry, attrs)
 
-    with :ok <- ensure_no_open_entry(changeset, time_entry.task_id, time_entry.id) do
-      Repo.update(changeset)
+    with :ok <- ensure_no_open_entry(changeset, task.id, time_entry.id) do
+      write_and_update_status(scope, task, changeset)
     end
   end
 
@@ -164,12 +169,14 @@ defmodule Brekitdown.TimeEntries do
   end
 
   # Both writes or neither: an entry the task's status does not reflect is a lie the next
-  # read would tell. Extracted from create_time_entry/3 because inlining it nests
-  # with -> fn -> with, one level past Credo.Check.Refactor.Nesting's max_nesting: 2.
-  defp insert_and_update_status(scope, task, changeset) do
+  # read would tell. `insert_or_update/1` dispatches on the changeset's data state, so create
+  # and update share one transaction and one rule rather than drifting apart. A function of
+  # its own because inlining it nests with -> fn -> with, one level past
+  # Credo.Check.Refactor.Nesting's max_nesting: 2.
+  defp write_and_update_status(scope, task, changeset) do
     Repo.transact(fn ->
-      with {:ok, time_entry} <- Repo.insert(changeset),
-           status = status_after_create(task.status, TimeEntry.state(time_entry)),
+      with {:ok, time_entry} <- Repo.insert_or_update(changeset),
+           status = status_with_entry(task.status, TimeEntry.state(time_entry)),
            {:ok, _task} <- Tasks.update_status(scope, task, status) do
         {:ok, time_entry}
       end
@@ -208,10 +215,12 @@ defmodule Brekitdown.TimeEntries do
 
   # Status describes the task now, so only a present-tense claim may override a status the
   # user chose. `:open` is one; `:closed` is a claim about the past and can only contradict
-  # `:scheduled`, which is itself the claim that nothing has been worked on yet.
-  defp status_after_create(_status, :open), do: :in_progress
-  defp status_after_create(:scheduled, :closed), do: :in_progress
-  defp status_after_create(status, :closed), do: status
+  # `:scheduled`, which is itself the claim that nothing has been worked on yet. Keyed on the
+  # entry that now exists, not on the verb that wrote it, so creating an open entry and
+  # un-stopping one cannot disagree.
+  defp status_with_entry(_status, :open), do: :in_progress
+  defp status_with_entry(:scheduled, :closed), do: :in_progress
+  defp status_with_entry(status, :closed), do: status
 
   defp status_after_delete(:in_progress, false), do: TaskStatuses.default()
   defp status_after_delete(status, _), do: status

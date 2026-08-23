@@ -101,7 +101,7 @@ defmodule BrekitdownWeb.TimeEntryController do
     time_entry = TimeEntries.get_time_entry!(scope, task, time_entry_id)
 
     with {:ok, %TimeEntry{} = time_entry} <-
-           TimeEntries.update_time_entry(scope, time_entry, time_entry_params) do
+           TimeEntries.update_time_entry(scope, task, time_entry, time_entry_params) do
       render(conn, :show, time_entry: time_entry)
     end
   end
