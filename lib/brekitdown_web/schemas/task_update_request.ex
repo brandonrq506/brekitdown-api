@@ -9,11 +9,11 @@ defmodule BrekitdownWeb.Schemas.TaskUpdateRequest do
     properties: %{
       task: %Schema{
         type: :object,
+        minProperties: 1,
         properties: %{
           name: %Schema{type: :string, maxLength: 100},
           due_at: %Schema{type: :string, format: :"date-time", nullable: true}
-        },
-        required: [:name]
+        }
       }
     },
     required: [:task]
