@@ -167,6 +167,14 @@ defmodule BrekitdownWeb.TaskControllerTest do
                assert_response_schema(conn, 200, "TaskResponse")["data"]
     end
 
+    test "updates only the due date when name is omitted", %{conn: conn, task: task} do
+      due_at = "2030-01-02T03:04:05Z"
+      conn = put(conn, ~p"/api/tasks/#{task}", task: %{due_at: due_at})
+
+      assert %{"name" => "Task 1", "due_at" => ^due_at} =
+               assert_response_schema(conn, 200, "TaskResponse")["data"]
+    end
+
     test "renders errors when data is invalid", %{conn: conn, task: task} do
       conn = put(conn, ~p"/api/tasks/#{task}", task: @invalid_attrs)
       assert %{"errors" => _} = assert_response_schema(conn, 422, "ChangesetError")
