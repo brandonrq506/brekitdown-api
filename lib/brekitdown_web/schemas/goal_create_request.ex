@@ -1,10 +1,10 @@
-defmodule BrekitdownWeb.Schemas.GoalRequest do
-  @moduledoc "Request body for creating/updating a goal: a nested goal object."
+defmodule BrekitdownWeb.Schemas.GoalCreateRequest do
+  @moduledoc "Request body for creating a goal: a nested goal object."
   require OpenApiSpex
   alias OpenApiSpex.Schema
 
   OpenApiSpex.schema(%{
-    title: "GoalRequest",
+    title: "GoalCreateRequest",
     type: :object,
     properties: %{
       goal: %Schema{

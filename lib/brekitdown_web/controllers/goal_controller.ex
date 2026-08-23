@@ -4,7 +4,15 @@ defmodule BrekitdownWeb.GoalController do
 
   alias Brekitdown.Goals
   alias Brekitdown.Goals.Goal
-  alias BrekitdownWeb.Schemas.{ChangesetError, Error, GoalRequest, GoalResponse, GoalsResponse}
+
+  alias BrekitdownWeb.Schemas.{
+    ChangesetError,
+    Error,
+    GoalCreateRequest,
+    GoalResponse,
+    GoalsResponse,
+    GoalUpdateRequest
+  }
 
   action_fallback BrekitdownWeb.FallbackController
   plug OpenApiSpex.Plug.CastAndValidate, render_error: BrekitdownWeb.ValidationErrorPlug
@@ -28,7 +36,7 @@ defmodule BrekitdownWeb.GoalController do
   operation(:create,
     summary: "Create a goal",
     security: [%{"bearer" => []}],
-    request_body: {"Goal attributes", "application/json", GoalRequest},
+    request_body: {"Goal attributes", "application/json", GoalCreateRequest},
     responses: [
       created: {"Goal created", "application/json", GoalResponse},
       unprocessable_entity: {"Validation errors", "application/json", ChangesetError},
@@ -37,7 +45,7 @@ defmodule BrekitdownWeb.GoalController do
   )
 
   def create(conn, _params) do
-    %GoalRequest{goal: goal_params} = OpenApiSpex.body_params(conn)
+    %GoalCreateRequest{goal: goal_params} = OpenApiSpex.body_params(conn)
 
     with {:ok, %Goal{} = goal} <- Goals.create_goal(conn.assigns.current_scope, goal_params) do
       conn
@@ -71,7 +79,7 @@ defmodule BrekitdownWeb.GoalController do
     parameters: [
       id: [in: :path, type: :string, required: true, description: "Goal reference_xid"]
     ],
-    request_body: {"Goal params", "application/json", GoalRequest},
+    request_body: {"Goal params", "application/json", GoalUpdateRequest},
     responses: [
       ok: {"Goal updated", "application/json", GoalResponse},
       unprocessable_entity: {"Validation errors", "application/json", ChangesetError},
@@ -81,7 +89,7 @@ defmodule BrekitdownWeb.GoalController do
   )
 
   def update(conn, %{id: id}) do
-    %GoalRequest{goal: goal_params} = OpenApiSpex.body_params(conn)
+    %GoalUpdateRequest{goal: goal_params} = OpenApiSpex.body_params(conn)
 
     goal = Goals.get_goal!(conn.assigns.current_scope, id)
 
