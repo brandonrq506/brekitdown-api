@@ -96,7 +96,7 @@ defmodule Brekitdown.TimeEntries do
     changeset = TimeEntry.create_changeset(%TimeEntry{}, attrs, scope, task)
 
     with :ok <- ensure_leaf(task),
-         :ok <- ensure_no_open_entry(changeset, task.id) do
+         :ok <- ensure_no_running_entry(changeset, task.id) do
       write_and_update_status(scope, task, changeset)
     end
   end
@@ -123,7 +123,7 @@ defmodule Brekitdown.TimeEntries do
 
     changeset = TimeEntry.update_changeset(time_entry, attrs)
 
-    with :ok <- ensure_no_open_entry(changeset, task.id, time_entry.id) do
+    with :ok <- ensure_no_running_entry(changeset, task.id, time_entry.id) do
       write_and_update_status(scope, task, changeset)
     end
   end
@@ -191,19 +191,19 @@ defmodule Brekitdown.TimeEntries do
   end
 
   # A task may have at most one running entry. Checked here rather than left to
-  # :time_entries_one_open_per_task_index so the failure is a 409 on task state,
+  # :time_entries_one_running_per_task_index so the failure is a 409 on task state,
   # not a 422 on a column the client never sent. The index stays as the backstop.
-  defp ensure_no_open_entry(changeset, task_id, except_id \\ nil) do
-    if entry_open?(changeset) and open_entry_exists?(task_id, except_id) do
+  defp ensure_no_running_entry(changeset, task_id, except_id \\ nil) do
+    if entry_running?(changeset) and running_entry_exists?(task_id, except_id) do
       {:error, :entry_already_running}
     else
       :ok
     end
   end
 
-  defp entry_open?(changeset), do: is_nil(Ecto.Changeset.get_field(changeset, :ended_at))
+  defp entry_running?(changeset), do: is_nil(Ecto.Changeset.get_field(changeset, :ended_at))
 
-  defp open_entry_exists?(task_id, except_id) do
+  defp running_entry_exists?(task_id, except_id) do
     TimeEntry
     |> where([te], te.task_id == ^task_id and is_nil(te.ended_at))
     |> exclude_entry(except_id)
@@ -214,13 +214,13 @@ defmodule Brekitdown.TimeEntries do
   defp exclude_entry(query, id), do: where(query, [te], te.id != ^id)
 
   # Status describes the task now, so only a present-tense claim may override a status the
-  # user chose. `:open` is one; `:closed` is a claim about the past and can only contradict
+  # user chose. `:running` is one; `:finished` is a claim about the past and can only contradict
   # `:scheduled`, which is itself the claim that nothing has been worked on yet. Keyed on the
-  # entry that now exists, not on the verb that wrote it, so creating an open entry and
-  # un-stopping one cannot disagree.
-  defp status_with_entry(_status, :open), do: :in_progress
-  defp status_with_entry(:scheduled, :closed), do: :in_progress
-  defp status_with_entry(status, :closed), do: status
+  # entry that now exists, not on the verb that wrote it, so starting an entry and un-stopping
+  # one cannot disagree.
+  defp status_with_entry(_status, :running), do: :in_progress
+  defp status_with_entry(:scheduled, :finished), do: :in_progress
+  defp status_with_entry(status, :finished), do: status
 
   defp status_after_delete(:in_progress, false), do: TaskStatuses.default()
   defp status_after_delete(status, _), do: status

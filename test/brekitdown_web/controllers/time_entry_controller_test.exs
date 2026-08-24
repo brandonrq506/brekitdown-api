@@ -128,7 +128,7 @@ defmodule BrekitdownWeb.TimeEntryControllerTest do
       scope: scope,
       task: task
     } do
-      _open = time_entry_fixture(scope, task, %{ended_at: nil})
+      _running = time_entry_fixture(scope, task, %{ended_at: nil})
 
       conn = post(conn, ~p"/api/tasks/#{task}/time_entries", time_entry: %{started_at: now()})
       body = assert_response_schema(conn, 409, "ConflictError")
@@ -213,7 +213,7 @@ defmodule BrekitdownWeb.TimeEntryControllerTest do
       %{task: task, entry: time_entry_fixture(scope, task, %{ended_at: nil})}
     end
 
-    test "stops an open entry, then un-stops it", %{
+    test "stops a running entry, then un-stops it", %{
       conn: conn,
       user: user,
       task: task,
@@ -269,12 +269,12 @@ defmodule BrekitdownWeb.TimeEntryControllerTest do
                started_at
     end
 
-    test "409 when un-stopping would leave two entries open", %{
+    test "409 when un-stopping would leave two entries running", %{
       conn: conn,
       scope: scope,
       task: task
     } do
-      # the setup's entry is already open on this task; this one is finished
+      # the setup's entry is already running on this task; this one is finished
       finished =
         time_entry_fixture(scope, task, %{
           started_at: five_hours_ago(),
