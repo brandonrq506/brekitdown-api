@@ -128,7 +128,7 @@ defmodule BrekitdownWeb.TimeEntryControllerTest do
       scope: scope,
       task: task
     } do
-      _open = time_entry_fixture(scope, task, %{ended_at: nil})
+      _running = time_entry_fixture(scope, task, %{ended_at: nil})
 
       conn = post(conn, ~p"/api/tasks/#{task}/time_entries", time_entry: %{started_at: now()})
       body = assert_response_schema(conn, 409, "ConflictError")
@@ -164,6 +164,40 @@ defmodule BrekitdownWeb.TimeEntryControllerTest do
                assert_response_schema(conn, 422, "ChangesetError")
     end
 
+    test "a running entry puts a completed task back in progress", %{
+      conn: conn,
+      scope: scope,
+      user: user
+    } do
+      task = task_fixture(scope, %{status: :completed})
+
+      conn =
+        post(conn, ~p"/api/tasks/#{task}/time_entries", time_entry: %{started_at: hours_ago(2)})
+
+      assert_response_schema(conn, 201, "TimeEntryResponse")
+
+      conn = get(authed_conn(user), ~p"/api/tasks/#{task}")
+      assert assert_response_schema(conn, 200, "TaskResponse")["data"]["status"] == "in_progress"
+    end
+
+    test "a finished entry leaves a completed task completed", %{
+      conn: conn,
+      scope: scope,
+      user: user
+    } do
+      task = task_fixture(scope, %{status: :completed})
+
+      conn =
+        post(conn, ~p"/api/tasks/#{task}/time_entries",
+          time_entry: %{started_at: five_hours_ago(), ended_at: four_hours_ago()}
+        )
+
+      assert_response_schema(conn, 201, "TimeEntryResponse")
+
+      conn = get(authed_conn(user), ~p"/api/tasks/#{task}")
+      assert assert_response_schema(conn, 200, "TaskResponse")["data"]["status"] == "completed"
+    end
+
     test "404 for another user's task", %{conn: conn} do
       other = task_fixture(user_scope_fixture())
 
@@ -179,7 +213,7 @@ defmodule BrekitdownWeb.TimeEntryControllerTest do
       %{task: task, entry: time_entry_fixture(scope, task, %{ended_at: nil})}
     end
 
-    test "stops an open entry, then un-stops it", %{
+    test "stops a running entry, then un-stops it", %{
       conn: conn,
       user: user,
       task: task,
@@ -206,6 +240,23 @@ defmodule BrekitdownWeb.TimeEntryControllerTest do
       assert resumed["reference_xid"] == entry.reference_xid
     end
 
+    test "un-stopping an entry puts a completed task back in progress", %{
+      conn: conn,
+      scope: scope,
+      user: user
+    } do
+      task = task_fixture(scope, %{status: :completed})
+      entry = time_entry_fixture(scope, task)
+
+      conn =
+        patch(conn, ~p"/api/tasks/#{task}/time_entries/#{entry}", time_entry: %{ended_at: nil})
+
+      assert_response_schema(conn, 200, "TimeEntryResponse")
+
+      conn = get(authed_conn(user), ~p"/api/tasks/#{task}")
+      assert assert_response_schema(conn, 200, "TaskResponse")["data"]["status"] == "in_progress"
+    end
+
     test "edits started_at", %{conn: conn, task: task, entry: entry} do
       started_at = hours_ago(3)
 
@@ -218,12 +269,12 @@ defmodule BrekitdownWeb.TimeEntryControllerTest do
                started_at
     end
 
-    test "409 when un-stopping would leave two entries open", %{
+    test "409 when un-stopping would leave two entries running", %{
       conn: conn,
       scope: scope,
       task: task
     } do
-      # the setup's entry is already open on this task; this one is finished
+      # the setup's entry is already running on this task; this one is finished
       finished =
         time_entry_fixture(scope, task, %{
           started_at: five_hours_ago(),

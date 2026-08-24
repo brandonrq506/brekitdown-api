@@ -73,7 +73,13 @@ defmodule Brekitdown.TimeEntries do
   end
 
   @doc """
-  Creates a time_entry for a task.
+  Creates a time_entry for a task, and moves the task's status when the new entry says
+  work is happening.
+
+  A running entry (no `ended_at`) claims work is happening *now*, so it puts the task in
+  progress whatever it was. A finished entry only claims work happened, so it starts a
+  task that is still `:scheduled` and leaves a deliberate status alone — logging time
+  against something you dropped does not un-drop it.
 
   ## Examples
 
@@ -90,30 +96,35 @@ defmodule Brekitdown.TimeEntries do
     changeset = TimeEntry.create_changeset(%TimeEntry{}, attrs, scope, task)
 
     with :ok <- ensure_leaf(task),
-         :ok <- ensure_no_open_entry(changeset, task.id) do
-      Repo.insert(changeset)
+         :ok <- ensure_no_running_entry(changeset, task.id) do
+      write_and_update_status(scope, task, changeset)
     end
   end
 
   @doc """
-  Updates a time_entry for a task.
+  Updates a time_entry for a task, and moves the task's status by the same rule as
+  `create_time_entry/3`, applied to the entry the edit leaves behind.
+
+  Un-stopping an entry (clearing `ended_at`) means work is being done on it, so it puts the task in progress. Stopping an entry, or correcting its timestamps,
+  claims nothing about the task now and leaves a deliberate status alone.
 
   ## Examples
 
-      iex> update_time_entry(scope, time_entry, %{field: new_value})
+      iex> update_time_entry(scope, task, time_entry, %{field: new_value})
       {:ok, %TimeEntry{}}
 
-      iex> update_time_entry(scope, time_entry, %{field: bad_value})
+      iex> update_time_entry(scope, task, time_entry, %{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_time_entry(%Scope{} = scope, %TimeEntry{} = time_entry, attrs) do
+  def update_time_entry(%Scope{} = scope, %Task{} = task, %TimeEntry{} = time_entry, attrs) do
     true = time_entry.user_id == scope.user.id
+    true = time_entry.task_id == task.id
 
     changeset = TimeEntry.update_changeset(time_entry, attrs)
 
-    with :ok <- ensure_no_open_entry(changeset, time_entry.task_id, time_entry.id) do
-      Repo.update(changeset)
+    with :ok <- ensure_no_running_entry(changeset, task.id, time_entry.id) do
+      write_and_update_status(scope, task, changeset)
     end
   end
 
@@ -132,13 +143,6 @@ defmodule Brekitdown.TimeEntries do
   def delete_time_entry(%Scope{} = scope, %Task{} = task, %TimeEntry{} = time_entry) do
     true = time_entry.user_id == scope.user.id
     true = time_entry.task_id == task.id
-
-    # If the task has more entries, leave its status as-is.
-    # If the task has no more entries, then:
-    #   :dropped -> :dropped
-    #   :on_hold -> :on_hold
-    #   :completed -> :completed
-    #   :in_progress -> :scheduled
 
     Repo.transact(fn ->
       with {:ok, time_entry} <- Repo.delete(time_entry),
@@ -164,6 +168,21 @@ defmodule Brekitdown.TimeEntries do
     |> Repo.exists?()
   end
 
+  # Both writes or neither: an entry the task's status does not reflect is a lie the next
+  # read would tell. `insert_or_update/1` dispatches on the changeset's data state, so create
+  # and update share one transaction and one rule rather than drifting apart. A function of
+  # its own because inlining it nests with -> fn -> with, one level past
+  # Credo.Check.Refactor.Nesting's max_nesting: 2.
+  defp write_and_update_status(scope, task, changeset) do
+    Repo.transact(fn ->
+      with {:ok, time_entry} <- Repo.insert_or_update(changeset),
+           status = status_with_entry(task.status, TimeEntry.state(time_entry)),
+           {:ok, _task} <- Tasks.update_status(scope, task, status) do
+        {:ok, time_entry}
+      end
+    end)
+  end
+
   defp ensure_leaf(%Task{} = task) do
     case Tasks.leaf?(task) do
       true -> :ok
@@ -172,19 +191,19 @@ defmodule Brekitdown.TimeEntries do
   end
 
   # A task may have at most one running entry. Checked here rather than left to
-  # :time_entries_one_open_per_task_index so the failure is a 409 on task state,
+  # :time_entries_one_running_per_task_index so the failure is a 409 on task state,
   # not a 422 on a column the client never sent. The index stays as the backstop.
-  defp ensure_no_open_entry(changeset, task_id, except_id \\ nil) do
-    if entry_open?(changeset) and open_entry_exists?(task_id, except_id) do
+  defp ensure_no_running_entry(changeset, task_id, except_id \\ nil) do
+    if entry_running?(changeset) and running_entry_exists?(task_id, except_id) do
       {:error, :entry_already_running}
     else
       :ok
     end
   end
 
-  defp entry_open?(changeset), do: is_nil(Ecto.Changeset.get_field(changeset, :ended_at))
+  defp entry_running?(changeset), do: is_nil(Ecto.Changeset.get_field(changeset, :ended_at))
 
-  defp open_entry_exists?(task_id, except_id) do
+  defp running_entry_exists?(task_id, except_id) do
     TimeEntry
     |> where([te], te.task_id == ^task_id and is_nil(te.ended_at))
     |> exclude_entry(except_id)
@@ -193,6 +212,15 @@ defmodule Brekitdown.TimeEntries do
 
   defp exclude_entry(query, nil), do: query
   defp exclude_entry(query, id), do: where(query, [te], te.id != ^id)
+
+  # Status describes the task now, so only a present-tense claim may override a status the
+  # user chose. `:running` is one; `:finished` is a claim about the past and can only contradict
+  # `:scheduled`, which is itself the claim that nothing has been worked on yet. Keyed on the
+  # entry that now exists, not on the verb that wrote it, so starting an entry and un-stopping
+  # one cannot disagree.
+  defp status_with_entry(_status, :running), do: :in_progress
+  defp status_with_entry(:scheduled, :finished), do: :in_progress
+  defp status_with_entry(status, :finished), do: status
 
   defp status_after_delete(:in_progress, false), do: TaskStatuses.default()
   defp status_after_delete(status, _), do: status

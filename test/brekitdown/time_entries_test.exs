@@ -12,7 +12,7 @@ defmodule Brekitdown.TimeEntriesTest do
   defp hours_ago(hours), do: DateTime.utc_now(:second) |> DateTime.shift(hour: -hours)
 
   describe "create_time_entry/3" do
-    test "creates an open entry" do
+    test "creates a running entry" do
       scope = user_scope_fixture()
       task = task_fixture(scope)
       started_at = hours_ago(2)
@@ -82,19 +82,19 @@ defmodule Brekitdown.TimeEntriesTest do
                TimeEntries.create_time_entry(scope, parent, %{started_at: hours_ago(2)})
     end
 
-    test "rejects a second open entry on the same task" do
+    test "rejects a second running entry on the same task" do
       scope = user_scope_fixture()
       task = task_fixture(scope)
-      _open = time_entry_fixture(scope, task, %{ended_at: nil})
+      _running = time_entry_fixture(scope, task, %{ended_at: nil})
 
       assert {:error, :entry_already_running} =
                TimeEntries.create_time_entry(scope, task, %{started_at: hours_ago(1)})
     end
 
-    test "allows a finished entry while another entry is open on the task" do
+    test "allows a finished entry while another entry is running on the task" do
       scope = user_scope_fixture()
       task = task_fixture(scope)
-      _open = time_entry_fixture(scope, task, %{ended_at: nil})
+      _running = time_entry_fixture(scope, task, %{ended_at: nil})
 
       assert {:ok, %TimeEntry{}} =
                TimeEntries.create_time_entry(scope, task, %{
@@ -103,7 +103,7 @@ defmodule Brekitdown.TimeEntriesTest do
                })
     end
 
-    test "allows an open entry on each of two different tasks" do
+    test "allows a running entry on each of two different tasks" do
       scope = user_scope_fixture()
       task = task_fixture(scope)
       other_task = task_fixture(scope, %{name: "Other task"})
@@ -115,13 +115,58 @@ defmodule Brekitdown.TimeEntriesTest do
                TimeEntries.create_time_entry(scope, other_task, %{started_at: hours_ago(2)})
     end
 
-    test "leaves the task's status untouched" do
+    test "a running entry starts a scheduled task" do
       scope = user_scope_fixture()
       task = task_fixture(scope)
 
       {:ok, _entry} = TimeEntries.create_time_entry(scope, task, %{started_at: hours_ago(2)})
 
-      assert Tasks.get_task!(scope, task.reference_xid).status == task.status
+      assert Tasks.get_task!(scope, task.reference_xid).status == :in_progress
+    end
+
+    test "a running entry puts a completed task back in progress" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope, %{status: :completed})
+
+      {:ok, _entry} = TimeEntries.create_time_entry(scope, task, %{started_at: hours_ago(2)})
+
+      assert Tasks.get_task!(scope, task.reference_xid).status == :in_progress
+    end
+
+    test "a running entry puts a dropped task back in progress" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope, %{status: :dropped})
+
+      {:ok, _entry} = TimeEntries.create_time_entry(scope, task, %{started_at: hours_ago(2)})
+
+      assert Tasks.get_task!(scope, task.reference_xid).status == :in_progress
+    end
+
+    test "a finished entry starts a scheduled task" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope)
+
+      _entry = time_entry_fixture(scope, task)
+
+      assert Tasks.get_task!(scope, task.reference_xid).status == :in_progress
+    end
+
+    test "a finished entry leaves a dropped task dropped" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope, %{status: :dropped})
+
+      _entry = time_entry_fixture(scope, task)
+
+      assert Tasks.get_task!(scope, task.reference_xid).status == :dropped
+    end
+
+    test "a finished entry leaves a completed task completed" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope, %{status: :completed})
+
+      _entry = time_entry_fixture(scope, task)
+
+      assert Tasks.get_task!(scope, task.reference_xid).status == :completed
     end
 
     test "raises for a task owned by another user" do
@@ -135,15 +180,33 @@ defmodule Brekitdown.TimeEntriesTest do
     end
   end
 
-  describe "update_time_entry/3" do
-    test "stops an open entry" do
+  describe ":time_entries_one_running_per_task_index" do
+    # The context's 409 guard normally wins the race, so nothing else reaches the index.
+    # This goes around the guard to prove the constraint name the schema declares still
+    # matches the one the database holds — the only way renaming either breaks quietly.
+    test "reports a second running entry through the changeset instead of raising" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope)
+      attrs = %{started_at: hours_ago(2)}
+
+      {:ok, _entry} = Repo.insert(TimeEntry.create_changeset(%TimeEntry{}, attrs, scope, task))
+
+      assert {:error, changeset} =
+               Repo.insert(TimeEntry.create_changeset(%TimeEntry{}, attrs, scope, task))
+
+      assert %{task_id: [_ | _]} = errors_on(changeset)
+    end
+  end
+
+  describe "update_time_entry/4" do
+    test "stops a running entry" do
       scope = user_scope_fixture()
       task = task_fixture(scope)
       entry = time_entry_fixture(scope, task, %{ended_at: nil})
       ended_at = DateTime.utc_now(:second)
 
       assert {:ok, %TimeEntry{} = updated} =
-               TimeEntries.update_time_entry(scope, entry, %{ended_at: ended_at})
+               TimeEntries.update_time_entry(scope, task, entry, %{ended_at: ended_at})
 
       assert updated.ended_at == ended_at
       assert updated.started_at == entry.started_at
@@ -155,21 +218,21 @@ defmodule Brekitdown.TimeEntriesTest do
       entry = time_entry_fixture(scope, task)
 
       assert {:ok, %TimeEntry{} = updated} =
-               TimeEntries.update_time_entry(scope, entry, %{ended_at: nil})
+               TimeEntries.update_time_entry(scope, task, entry, %{ended_at: nil})
 
       assert updated.ended_at == nil
     end
 
-    test "rejects un-stopping when another entry is already open on the task" do
+    test "rejects un-stopping when another entry is already running on the task" do
       scope = user_scope_fixture()
       task = task_fixture(scope)
       finished = time_entry_fixture(scope, task)
 
-      _open =
+      _running =
         time_entry_fixture(scope, task, %{started_at: DateTime.utc_now(:second), ended_at: nil})
 
       assert {:error, :entry_already_running} =
-               TimeEntries.update_time_entry(scope, finished, %{ended_at: nil})
+               TimeEntries.update_time_entry(scope, task, finished, %{ended_at: nil})
     end
 
     test "edits started_at" do
@@ -179,7 +242,7 @@ defmodule Brekitdown.TimeEntriesTest do
       started_at = hours_ago(3)
 
       assert {:ok, %TimeEntry{} = updated} =
-               TimeEntries.update_time_entry(scope, entry, %{started_at: started_at})
+               TimeEntries.update_time_entry(scope, task, entry, %{started_at: started_at})
 
       assert updated.started_at == started_at
       assert updated.ended_at == entry.ended_at
@@ -191,22 +254,47 @@ defmodule Brekitdown.TimeEntriesTest do
       entry = time_entry_fixture(scope, task)
 
       assert {:error, changeset} =
-               TimeEntries.update_time_entry(scope, entry, %{
+               TimeEntries.update_time_entry(scope, task, entry, %{
                  started_at: DateTime.utc_now(:second)
                })
 
       assert %{ended_at: ["must not be before started_at"]} = errors_on(changeset)
     end
 
-    test "leaves the task's status untouched" do
+    test "stopping an entry leaves the task in progress" do
       scope = user_scope_fixture()
       task = task_fixture(scope)
       entry = time_entry_fixture(scope, task, %{ended_at: nil})
 
-      {:ok, _} =
-        TimeEntries.update_time_entry(scope, entry, %{ended_at: DateTime.utc_now(:second)})
+      # The fixture's running entry already started the task; refetch so the rule below
+      # runs against the status the database holds, not the one task_fixture returned.
+      task = Tasks.get_task!(scope, task.reference_xid)
+      assert task.status == :in_progress
 
-      assert Tasks.get_task!(scope, task.reference_xid).status == task.status
+      {:ok, _} =
+        TimeEntries.update_time_entry(scope, task, entry, %{ended_at: DateTime.utc_now(:second)})
+
+      assert Tasks.get_task!(scope, task.reference_xid).status == :in_progress
+    end
+
+    test "un-stopping an entry puts a completed task back in progress" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope, %{status: :completed})
+      entry = time_entry_fixture(scope, task)
+
+      {:ok, _} = TimeEntries.update_time_entry(scope, task, entry, %{ended_at: nil})
+
+      assert Tasks.get_task!(scope, task.reference_xid).status == :in_progress
+    end
+
+    test "correcting a finished entry's timestamps leaves a dropped task dropped" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope, %{status: :dropped})
+      entry = time_entry_fixture(scope, task)
+
+      {:ok, _} = TimeEntries.update_time_entry(scope, task, entry, %{started_at: hours_ago(3)})
+
+      assert Tasks.get_task!(scope, task.reference_xid).status == :dropped
     end
 
     test "raises for another user's entry" do
@@ -216,7 +304,18 @@ defmodule Brekitdown.TimeEntriesTest do
       entry = time_entry_fixture(scope, task)
 
       assert_raise MatchError, fn ->
-        TimeEntries.update_time_entry(other_scope, entry, %{ended_at: nil})
+        TimeEntries.update_time_entry(other_scope, task, entry, %{ended_at: nil})
+      end
+    end
+
+    test "raises when the entry belongs to another task" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope)
+      other_task = task_fixture(scope, %{name: "Other task"})
+      entry = time_entry_fixture(scope, task)
+
+      assert_raise MatchError, fn ->
+        TimeEntries.update_time_entry(scope, other_task, entry, %{ended_at: nil})
       end
     end
   end

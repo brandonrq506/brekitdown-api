@@ -1,6 +1,6 @@
 defmodule Brekitdown.TimeEntries.TimeEntry do
   @moduledoc """
-  One interval of work on a task. A nil `ended_at` means the timer is still running.
+  One interval of work on a task. A nil `ended_at` means the entry is still running.
 
   - `started_at` and `ended_at` are supplied by the client — they record when the user acted.
   """
@@ -29,7 +29,7 @@ defmodule Brekitdown.TimeEntries.TimeEntry do
     |> put_change(:user_id, user_scope.user.id)
     |> put_change(:task_id, task.id)
     |> validate_ended_not_before_started()
-    |> unique_constraint(:task_id, name: :time_entries_one_open_per_task_index)
+    |> unique_constraint(:task_id, name: :time_entries_one_running_per_task_index)
     |> check_constraint(:ended_at, name: :time_entries_ended_at_after_started_at)
   end
 
@@ -39,9 +39,23 @@ defmodule Brekitdown.TimeEntries.TimeEntry do
     |> cast(attrs, [:started_at, :ended_at])
     |> validate_required([:started_at])
     |> validate_ended_not_before_started()
-    |> unique_constraint(:task_id, name: :time_entries_one_open_per_task_index)
+    |> unique_constraint(:task_id, name: :time_entries_one_running_per_task_index)
     |> check_constraint(:ended_at, name: :time_entries_ended_at_after_started_at)
   end
+
+  @doc """
+  Whether the entry is `:running` or `:finished`.
+
+  Derived from `ended_at` rather than stored, so it cannot drift from the timestamps.
+
+  ## Examples
+
+      iex> state(%TimeEntry{ended_at: nil})
+      :running
+
+  """
+  def state(%__MODULE__{ended_at: nil}), do: :running
+  def state(%__MODULE__{}), do: :finished
 
   defp validate_ended_not_before_started(changeset) do
     started_at = get_field(changeset, :started_at)
