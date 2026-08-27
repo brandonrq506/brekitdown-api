@@ -52,6 +52,7 @@ defmodule Brekitdown.MixProject do
       {:cors_plug, "~> 3.0"},
       {:dns_cluster, "~> 0.2.0"},
       {:ecto_sql, "~> 3.13"},
+      {:flop, "~> 0.28.0"},
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:open_api_spex, "~> 3.22"},
