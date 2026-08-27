@@ -20,6 +20,8 @@ config :brekitdown, :scopes,
     test_setup_helper: :register_and_log_in_user
   ]
 
+config :flop, repo: Brekitdown.Repo
+
 config :brekitdown,
   ecto_repos: [Brekitdown.Repo],
   generators: [timestamp_type: :utc_datetime]
