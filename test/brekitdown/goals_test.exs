@@ -11,13 +11,26 @@ defmodule Brekitdown.GoalsTest do
 
     @invalid_attrs %{name: nil, description: nil}
 
-    test "list_goals/1 returns all scoped goals" do
+    test "paginated_list/2 returns only scoped goals with pagination metadata" do
       scope = user_scope_fixture()
       other_scope = user_scope_fixture()
       goal = goal_fixture(scope)
       other_goal = goal_fixture(other_scope)
-      assert Goals.list_goals(scope) == [goal]
-      assert Goals.list_goals(other_scope) == [other_goal]
+
+      assert {:ok, {[result], %Flop.Meta{total_count: 1, page_size: 20}}} =
+               Goals.paginated_list(scope)
+
+      assert result == goal
+
+      assert {:ok, {[other_result], %Flop.Meta{total_count: 1, page_size: 20}}} =
+               Goals.paginated_list(other_scope)
+
+      assert other_result == other_goal
+    end
+
+    test "page size menu is consistent with Flop limits" do
+      assert Enum.max(Goal.page_sizes()) == Flop.Schema.max_limit(%Goal{})
+      assert Flop.Schema.default_limit(%Goal{}) in Goal.page_sizes()
     end
 
     test "get_goal!/2 returns the scoped goal with the given reference_xid" do

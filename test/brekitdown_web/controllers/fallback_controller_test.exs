@@ -3,6 +3,7 @@ defmodule BrekitdownWeb.FallbackControllerTest do
 
   import ExUnit.CaptureLog
 
+  alias Brekitdown.Goals.Goal
   alias BrekitdownWeb.FallbackController
 
   setup do
@@ -27,6 +28,25 @@ defmodule BrekitdownWeb.FallbackControllerTest do
   test "{:error, :bad_request} renders a 400", %{conn: conn} do
     conn = FallbackController.call(conn, {:error, :bad_request})
     assert json_response(conn, 400) == %{"errors" => %{"detail" => "Bad Request"}}
+  end
+
+  test "{:error, %Flop.Meta{}} renders Flop validation errors as a 422", %{conn: conn} do
+    assert {:error, meta} = Flop.validate(%{page_size: 51}, for: Goal)
+
+    conn = FallbackController.call(conn, {:error, meta})
+
+    assert %{"errors" => %{"page_size" => [message]}} = json_response(conn, 422)
+    assert message =~ "must be less than or equal to 50"
+  end
+
+  test "Flop errors safely ignore unused complex interpolation metadata", %{conn: conn} do
+    assert {:error, meta} = Flop.validate(%{order_by: [:inserted_at]}, for: Goal)
+
+    conn = FallbackController.call(conn, {:error, meta})
+
+    assert json_response(conn, 422) == %{
+             "errors" => %{"order_by" => ["has an invalid entry"]}
+           }
   end
 
   test "{:error, :not_a_leaf_task} renders a 409 with its code and copy", %{conn: conn} do

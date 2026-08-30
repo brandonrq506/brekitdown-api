@@ -36,6 +36,20 @@ defmodule BrekitdownWeb.GoalControllerTest do
       conn = get(conn, ~p"/api/goals")
       assert assert_response_schema(conn, 200, "GoalsResponse")["data"] == []
     end
+
+    test "accepts a configured page size", %{conn: conn} do
+      conn = get(conn, ~p"/api/goals?page_size=10")
+
+      assert %{"meta" => %{"page_size" => 10}} =
+               assert_response_schema(conn, 200, "GoalsResponse")
+    end
+
+    test "rejects a page size outside the configured choices", %{conn: conn} do
+      conn = get(conn, ~p"/api/goals?page_size=15")
+
+      assert %{"errors" => %{"page_size" => [_message]}} =
+               assert_response_schema(conn, 422, "ChangesetError")
+    end
   end
 
   describe "create goal" do
