@@ -27,6 +27,16 @@ defmodule BrekitdownWeb.Schemas.PaginationMeta do
         nullable: true,
         description: "Previous page number, if any"
       }
-    }
+    },
+    required: [
+      :current_page,
+      :page_size,
+      :total_count,
+      :total_pages,
+      :has_next_page,
+      :has_previous_page,
+      :next_page,
+      :previous_page
+    ]
   })
 end
