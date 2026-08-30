@@ -4,6 +4,7 @@ defmodule BrekitdownWeb.GoalController do
 
   alias Brekitdown.Goals
   alias Brekitdown.Goals.Goal
+  alias OpenApiSpex.Schema
 
   alias BrekitdownWeb.Schemas.{
     ChangesetError,
@@ -22,15 +23,34 @@ defmodule BrekitdownWeb.GoalController do
   operation(:index,
     summary: "List the current user's goals",
     security: [%{"bearer" => []}],
+    parameters: [
+      page: [
+        in: :query,
+        description: "Page number",
+        schema: %Schema{type: :integer, minimum: 1, default: 1}
+      ],
+      page_size: [
+        in: :query,
+        description: "Number of goals per page",
+        schema: %Schema{
+          type: :integer,
+          enum: Goal.page_sizes(),
+          default: Flop.Schema.default_limit(%Goal{}),
+          maximum: Flop.Schema.max_limit(%Goal{})
+        }
+      ]
+    ],
     responses: [
       ok: {"The user's goals", "application/json", GoalsResponse},
       unauthorized: {"Unauthorized", "application/json", Error}
     ]
   )
 
-  def index(conn, _params) do
-    goals = Goals.list_goals(conn.assigns.current_scope)
-    render(conn, :index, goals: goals)
+  def index(conn, params) do
+    with {:ok, {goals, flop_meta}} <-
+           Goals.paginated_list(conn.assigns.current_scope, params) do
+      render(conn, :index, %{goals: goals, flop_meta: flop_meta})
+    end
   end
 
   operation(:create,

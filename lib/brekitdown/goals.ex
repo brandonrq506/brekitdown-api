@@ -32,16 +32,19 @@ defmodule Brekitdown.Goals do
   end
 
   @doc """
-  Returns the list of goals.
+  Returns a paginated list of goals for the current scope.
 
   ## Examples
 
-      iex> list_goals(scope)
-      [%Goal{}, ...]
+      iex> paginated_list(scope, %{page: 1, page_size: 20})
+      {:ok, {[%Goal{}, ...], %Flop.Meta{}}}
 
   """
-  def list_goals(%Scope{} = scope) do
-    Repo.all_by(Goal, user_id: scope.user.id)
+  def paginated_list(%Scope{} = scope, flop_params \\ %{}, preloads \\ []) do
+    Goal
+    |> where(user_id: ^scope.user.id)
+    |> preload(^preloads)
+    |> Flop.validate_and_run(flop_params, for: Goal, filtering: false, ordering: false)
   end
 
   @doc """
