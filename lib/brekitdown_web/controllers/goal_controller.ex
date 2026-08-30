@@ -42,6 +42,7 @@ defmodule BrekitdownWeb.GoalController do
     ],
     responses: [
       ok: {"The user's goals", "application/json", GoalsResponse},
+      unprocessable_entity: {"Invalid query parameters", "application/json", ChangesetError},
       unauthorized: {"Unauthorized", "application/json", Error}
     ]
   )

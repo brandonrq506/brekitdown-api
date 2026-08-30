@@ -11,6 +11,13 @@ defmodule BrekitdownWeb.FallbackController do
     |> render(:error, changeset: changeset)
   end
 
+  def call(conn, {:error, %Flop.Meta{} = meta}) do
+    conn
+    |> put_status(:unprocessable_content)
+    |> put_view(BrekitdownWeb.FlopJSON)
+    |> render(:error, meta: meta)
+  end
+
   # Known business errors -> standardized %{errors: %{detail: ...}} via ErrorJSON
   def call(conn, {:error, :not_found}), do: render_error(conn, :not_found, :"404")
   def call(conn, {:error, :unauthorized}), do: render_error(conn, :unauthorized, :"401")
