@@ -2,6 +2,22 @@ defmodule Brekitdown.Goals.Goal do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @page_sizes [10, 20, 30, 40, 50]
+
+  @derive {
+    Flop.Schema,
+    filterable: [],
+    sortable: [:name],
+    default_limit: 20,
+    max_limit: 50,
+    pagination_types: [:page],
+    default_pagination_type: :page,
+    default_order: %{
+      order_by: [:name],
+      order_directions: [:asc]
+    }
+  }
+
   @derive {Phoenix.Param, key: :reference_xid}
 
   schema "goals" do
@@ -23,4 +39,6 @@ defmodule Brekitdown.Goals.Goal do
     |> validate_length(:name, max: 100)
     |> put_change(:user_id, user_scope.user.id)
   end
+
+  def page_sizes, do: @page_sizes
 end

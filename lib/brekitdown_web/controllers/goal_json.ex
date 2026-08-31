@@ -1,11 +1,15 @@
 defmodule BrekitdownWeb.GoalJSON do
   alias Brekitdown.Goals.Goal
+  alias BrekitdownWeb.PaginationJSON
 
   @doc """
   Renders a list of goals.
   """
-  def index(%{goals: goals}) do
-    %{data: for(goal <- goals, do: data(goal))}
+  def index(%{goals: goals, flop_meta: flop_meta}) do
+    %{
+      data: for(goal <- goals, do: data(goal)),
+      meta: PaginationJSON.pagination_meta(flop_meta)
+    }
   end
 
   @doc """
