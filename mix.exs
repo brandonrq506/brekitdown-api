@@ -50,7 +50,7 @@ defmodule Brekitdown.MixProject do
       {:bandit, "~> 1.5"},
       {:bcrypt_elixir, "~> 3.0"},
       {:cors_plug, "~> 3.0"},
-      {:dns_cluster, "~> 0.2.0"},
+      {:dns_cluster, "~> 0.3.0"},
       {:ecto_sql, "~> 3.13"},
       {:flop, "~> 0.28.0"},
       {:gettext, "~> 1.0"},
