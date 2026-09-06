@@ -11,14 +11,14 @@ defmodule Brekitdown.TasksTest do
   import Brekitdown.GoalsFixtures
   import Brekitdown.TagsFixtures
 
-  describe "list_tasks/1" do
+  describe "list_tasks/3" do
     test "returns only the scoped user's tasks" do
       scope = user_scope_fixture()
       other_scope = user_scope_fixture()
       task = task_fixture(scope)
       _other = task_fixture(other_scope)
 
-      assert [listed] = Tasks.list_tasks(scope)
+      assert {:ok, [listed]} = Tasks.list_tasks(scope)
       assert listed.id == task.id
     end
 
@@ -27,8 +27,59 @@ defmodule Brekitdown.TasksTest do
       parent = task_fixture(scope)
       child = task_fixture(scope, %{parent_reference_xid: parent.reference_xid})
 
-      ids = scope |> Tasks.list_tasks() |> Enum.map(& &1.id) |> Enum.sort()
+      {:ok, tasks} = Tasks.list_tasks(scope)
+      ids = tasks |> Enum.map(& &1.id) |> Enum.sort()
       assert ids == Enum.sort([parent.id, child.id])
+    end
+
+    test "filters by goal_reference_xid, excluding other goals and goal-less tasks" do
+      scope = user_scope_fixture()
+      goal = goal_fixture(scope)
+      other_goal = goal_fixture(scope)
+      in_goal = task_fixture(scope, %{goal_reference_xid: goal.reference_xid})
+      _in_other = task_fixture(scope, %{goal_reference_xid: other_goal.reference_xid})
+      _goalless = task_fixture(scope)
+
+      assert {:ok, [listed]} = Tasks.list_tasks(scope, goal_filter(goal.reference_xid))
+      assert listed.id == in_goal.id
+    end
+
+    test "filtering by another user's goal returns no tasks" do
+      scope = user_scope_fixture()
+      other_scope = user_scope_fixture()
+      other_goal = goal_fixture(other_scope)
+      _other_task = task_fixture(other_scope, %{goal_reference_xid: other_goal.reference_xid})
+
+      assert {:ok, []} = Tasks.list_tasks(scope, goal_filter(other_goal.reference_xid))
+    end
+
+    test "rejects a field that is not filterable" do
+      scope = user_scope_fixture()
+      params = %{filters: %{"0" => %{field: "name", op: "==", value: "x"}}}
+
+      assert {:error, %Flop.Meta{errors: [filters: [[field: [{"is invalid", _}]]]]}} =
+               Tasks.list_tasks(scope, params)
+    end
+
+    test "rejects a value that is not a uuid" do
+      scope = user_scope_fixture()
+
+      assert {:error, %Flop.Meta{errors: [filters: [[value: [{"is invalid", _}]]]]}} =
+               Tasks.list_tasks(scope, goal_filter("nope"))
+    end
+
+    test "ignores pagination and ordering params instead of applying them" do
+      scope = user_scope_fixture()
+      for _ <- 1..3, do: task_fixture(scope)
+
+      assert {:ok, tasks} =
+               Tasks.list_tasks(scope, %{page: 1, page_size: 1, order_by: ["name"]})
+
+      assert length(tasks) == 3
+    end
+
+    test "public filter allowlist is exactly goal_reference_xid" do
+      assert Flop.Schema.filterable(%Task{}) == [:goal_reference_xid]
     end
   end
 
@@ -420,5 +471,9 @@ defmodule Brekitdown.TasksTest do
       assert Repo.aggregate(TaskTag, :count) == 0
       assert Tasks.get_task!(scope, task.reference_xid).id == task.id
     end
+  end
+
+  defp goal_filter(reference_xid) do
+    %{filters: %{"0" => %{field: "goal_reference_xid", op: "==", value: reference_xid}}}
   end
 end

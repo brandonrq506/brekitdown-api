@@ -6,15 +6,23 @@ defmodule Brekitdown.Tasks.Task do
 
   alias Brekitdown.Tasks.TaskStatuses
 
+  @derive {
+    Flop.Schema,
+    filterable: [:goal_reference_xid],
+    sortable: [],
+    default_limit: false,
+    adapter_opts: [
+      join_fields: [
+        goal_reference_xid: [binding: :goal, field: :reference_xid, ecto_type: Ecto.UUID]
+      ]
+    ]
+  }
+
   @derive {Phoenix.Param, key: :reference_xid}
 
   schema "tasks" do
     field :name, :string
-
-    field :status, Ecto.Enum,
-      values: TaskStatuses.all(),
-      default: TaskStatuses.default()
-
+    field :status, Ecto.Enum, values: TaskStatuses.all(), default: TaskStatuses.default()
     field :due_at, :utc_datetime
     field :reference_xid, Ecto.UUID, read_after_writes: true
     field :user_id, :id

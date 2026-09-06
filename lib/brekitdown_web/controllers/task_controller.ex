@@ -10,6 +10,7 @@ defmodule BrekitdownWeb.TaskController do
     ChangesetError,
     Error,
     TaskCreateRequest,
+    TaskFilters,
     TaskResponse,
     TasksResponse,
     TaskUpdateRequest
@@ -22,16 +23,28 @@ defmodule BrekitdownWeb.TaskController do
 
   operation(:index,
     summary: "List the current user's tasks",
+    description: "Optionally accepts filters. Supported: goal_reference_xid",
     security: [%{"bearer" => []}],
+    parameters: [
+      filters: [
+        in: :query,
+        style: :deepObject,
+        explode: true,
+        schema: TaskFilters
+      ]
+    ],
     responses: [
       ok: {"The user's tasks", "application/json", TasksResponse},
+      unprocessable_entity: {"Invalid query parameters", "application/json", ChangesetError},
       unauthorized: {"Unauthorized", "application/json", Error}
     ]
   )
 
-  def index(conn, _params) do
-    tasks = Tasks.list_tasks(conn.assigns.current_scope, [:goal, :tags, :parent])
-    render(conn, :index, tasks: tasks)
+  def index(conn, params) do
+    with {:ok, tasks} <-
+           Tasks.list_tasks(conn.assigns.current_scope, params, [:goal, :tags, :parent]) do
+      render(conn, :index, tasks: tasks)
+    end
   end
 
   operation(:create,
