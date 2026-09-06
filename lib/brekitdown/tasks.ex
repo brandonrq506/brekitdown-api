@@ -13,20 +13,34 @@ defmodule Brekitdown.Tasks do
   alias Brekitdown.Tasks.Task
 
   @doc """
-  Returns the list of tasks.
+  Returns the scoped tasks matching the given Flop parameters.
+
+  Only filtering is supported; pagination and ordering are disabled.
 
   ## Examples
 
-      iex> list_tasks(scope)
-      [%Task{}, ...]
+      iex> list_tasks(scope, %{filters: %{"0" => %{field: "goal_reference_xid", op: "==", value: uuid}}})
+      {:ok, [%Task{}, ...]}
+
+      iex> list_tasks(scope, %{filters: %{"0" => %{field: "name", op: "==", value: "x"}}})
+      {:error, %Flop.Meta{}}
 
   """
-  def list_tasks(scope, preload \\ [])
+  def list_tasks(scope, flop_params \\ %{}, preload \\ [])
 
-  def list_tasks(%Scope{} = scope, preload) do
-    Task
-    |> preload(^preload)
-    |> Repo.all_by(user_id: scope.user.id)
+  def list_tasks(%Scope{} = scope, flop_params, preload) do
+    opts = [for: Task, pagination: false, ordering: false]
+
+    with {:ok, flop} <- Flop.validate(flop_params, opts) do
+      tasks =
+        Task
+        |> where(user_id: ^scope.user.id)
+        |> preload(^preload)
+        |> Flop.with_named_bindings(flop, &join_task_assoc/2, opts)
+        |> Flop.all(flop, opts)
+
+      {:ok, tasks}
+    end
   end
 
   @doc """
@@ -294,5 +308,9 @@ defmodule Brekitdown.Tasks do
         |> Ecto.Changeset.put_change(:goal_id, parent.goal_id)
         |> validate_goal_matches_parent(scope, parent, goal_reference_xid)
     end
+  end
+
+  defp join_task_assoc(query, :goal) do
+    join(query, :inner, [t], g in assoc(t, :goal), as: :goal)
   end
 end
