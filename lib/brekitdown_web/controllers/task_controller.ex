@@ -41,10 +41,10 @@ defmodule BrekitdownWeb.TaskController do
   )
 
   def index(conn, params) do
-    with {:ok, tasks} <- Tasks.list_tasks(conn.assigns.current_scope, params, [:goal, :tags, :parent]) do
+    with {:ok, tasks} <-
+           Tasks.list_tasks(conn.assigns.current_scope, params, [:goal, :tags, :parent]) do
       render(conn, :index, tasks: tasks)
     end
-
   end
 
   operation(:create,
