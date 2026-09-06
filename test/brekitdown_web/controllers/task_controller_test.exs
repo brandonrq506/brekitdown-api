@@ -37,6 +37,61 @@ defmodule BrekitdownWeb.TaskControllerTest do
       conn = get(conn, ~p"/api/tasks")
       assert assert_response_schema(conn, 200, "TasksResponse")["data"] == []
     end
+
+    test "filters tasks by goal_reference_xid", %{conn: conn, scope: scope} do
+      goal = goal_fixture(scope)
+      in_goal = task_fixture(scope, %{goal_reference_xid: goal.reference_xid})
+      _other = task_fixture(scope, %{goal_reference_xid: goal_fixture(scope).reference_xid})
+      _goalless = task_fixture(scope)
+
+      conn = get(conn, ~p"/api/tasks?#{goal_filter_query(goal.reference_xid)}")
+      body = assert_response_schema(conn, 200, "TasksResponse")
+      assert [%{"reference_xid" => ref, "goal_reference_xid" => goal_ref}] = body["data"]
+      assert ref == in_goal.reference_xid
+      assert goal_ref == goal.reference_xid
+    end
+
+    test "filtering by another user's goal returns an empty list", %{conn: conn} do
+      other_scope = user_scope_fixture()
+      other_goal = goal_fixture(other_scope)
+      _other_task = task_fixture(other_scope, %{goal_reference_xid: other_goal.reference_xid})
+
+      conn = get(conn, ~p"/api/tasks?#{goal_filter_query(other_goal.reference_xid)}")
+      assert assert_response_schema(conn, 200, "TasksResponse")["data"] == []
+    end
+
+    test "rejects a non-uuid filter value", %{conn: conn} do
+      conn = get(conn, ~p"/api/tasks?#{goal_filter_query("nope")}")
+
+      assert %{"errors" => %{"value" => [_]}} =
+               assert_response_schema(conn, 422, "ChangesetError")
+    end
+
+    test "rejects an unsupported filter field", %{conn: conn} do
+      query = %{filters: %{"0" => %{field: "name", op: "==", value: "x"}}}
+      conn = get(conn, ~p"/api/tasks?#{query}")
+
+      assert %{"errors" => %{"field" => [_]}} =
+               assert_response_schema(conn, 422, "ChangesetError")
+    end
+
+    test "rejects an unsupported operator", %{conn: conn, scope: scope} do
+      goal = goal_fixture(scope)
+
+      query = %{
+        filters: %{"0" => %{field: "goal_reference_xid", op: "!=", value: goal.reference_xid}}
+      }
+
+      conn = get(conn, ~p"/api/tasks?#{query}")
+      assert %{"errors" => %{"op" => [_]}} = assert_response_schema(conn, 422, "ChangesetError")
+    end
+
+    test "rejects pagination params, which this endpoint does not support", %{conn: conn} do
+      conn = get(conn, ~p"/api/tasks?page=2")
+
+      assert %{"errors" => %{"page" => [_]}} =
+               assert_response_schema(conn, 422, "ChangesetError")
+    end
   end
 
   describe "create task" do
@@ -203,5 +258,9 @@ defmodule BrekitdownWeb.TaskControllerTest do
 
   defp create_task(%{scope: scope}) do
     %{task: task_fixture(scope)}
+  end
+
+  defp goal_filter_query(reference_xid) do
+    %{filters: %{"0" => %{field: "goal_reference_xid", op: "==", value: reference_xid}}}
   end
 end
