@@ -1,5 +1,5 @@
 defmodule BrekitdownWeb.Schemas.TaskUpdateRequest do
-  @moduledoc "Request body for updating a task: name and due_at only."
+  @moduledoc "Request body for updating a task: name, description, and due_at only."
   require OpenApiSpex
   alias OpenApiSpex.Schema
 
@@ -12,6 +12,7 @@ defmodule BrekitdownWeb.Schemas.TaskUpdateRequest do
         minProperties: 1,
         properties: %{
           name: %Schema{type: :string, maxLength: 100},
+          description: %Schema{type: :string, maxLength: 2000},
           due_at: %Schema{type: :string, format: :"date-time", nullable: true}
         }
       }

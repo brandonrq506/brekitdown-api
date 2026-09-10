@@ -11,6 +11,7 @@ defmodule BrekitdownWeb.Schemas.TaskCreateRequest do
         type: :object,
         properties: %{
           name: %Schema{type: :string, maxLength: 100},
+          description: %Schema{type: :string, maxLength: 2000},
           status: %Schema{
             type: :string,
             enum: ["scheduled", "in_progress", "completed", "dropped", "on_hold"]

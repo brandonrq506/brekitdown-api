@@ -22,6 +22,7 @@ defmodule Brekitdown.Tasks.Task do
 
   schema "tasks" do
     field :name, :string
+    field :description, :string, default: ""
     field :status, Ecto.Enum, values: TaskStatuses.all(), default: TaskStatuses.default()
     field :due_at, :utc_datetime
     field :reference_xid, Ecto.UUID, read_after_writes: true
@@ -41,18 +42,20 @@ defmodule Brekitdown.Tasks.Task do
   @doc false
   def create_changeset(task, attrs, user_scope) do
     task
-    |> cast(attrs, [:name, :status, :due_at])
+    |> cast(attrs, [:name, :description, :status, :due_at])
     |> validate_required([:name])
     |> validate_length(:name, max: 100)
+    |> validate_length(:description, max: 2000)
     |> put_change(:user_id, user_scope.user.id)
   end
 
   @doc false
   def update_changeset(task, attrs) do
     task
-    |> cast(attrs, [:name, :due_at])
+    |> cast(attrs, [:name, :description, :due_at])
     |> validate_required([:name])
     |> validate_length(:name, max: 100)
+    |> validate_length(:description, max: 2000)
   end
 
   @doc false

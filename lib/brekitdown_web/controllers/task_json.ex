@@ -17,6 +17,7 @@ defmodule BrekitdownWeb.TaskJSON do
     %{
       reference_xid: task.reference_xid,
       name: task.name,
+      description: task.description,
       status: task.status,
       due_at: task.due_at,
       goal_reference_xid: goal_reference_xid(task.goal),

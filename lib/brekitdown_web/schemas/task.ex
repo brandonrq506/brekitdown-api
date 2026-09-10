@@ -11,6 +11,7 @@ defmodule BrekitdownWeb.Schemas.Task do
     properties: %{
       reference_xid: %Schema{type: :string, format: :uuid},
       name: %Schema{type: :string, maxLength: 100},
+      description: %Schema{type: :string, maxLength: 2000},
       status: %Schema{
         type: :string,
         enum: ["scheduled", "in_progress", "completed", "dropped", "on_hold"]
@@ -22,10 +23,11 @@ defmodule BrekitdownWeb.Schemas.Task do
       inserted_at: %Schema{type: :string, format: :"date-time"},
       updated_at: %Schema{type: :string, format: :"date-time"}
     },
-    required: [:reference_xid, :name, :status, :inserted_at, :updated_at],
+    required: [:reference_xid, :name, :description, :status, :inserted_at, :updated_at],
     example: %{
       reference_xid: "123e4567-e89b-12d3-a456-426614174000",
       name: "Finish writing the report",
+      description: "Complete the final sections and review the report for accuracy.",
       status: "scheduled",
       due_at: "2024-06-30T12:00:00Z",
       goal_reference_xid: "123e4567-e89b-12d3-a456-426614174001",
