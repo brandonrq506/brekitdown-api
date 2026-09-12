@@ -23,6 +23,7 @@ defmodule BrekitdownWeb.TaskJSON do
       due_at: task.due_at,
       goal_reference_xid: goal_reference_xid(task.goal),
       parent_reference_xid: parent_reference_xid(task.parent),
+      has_children: task.has_children,
       tags: tags(task.tags),
       time_entries: time_entries(task.time_entries),
       inserted_at: task.inserted_at,

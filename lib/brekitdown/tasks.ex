@@ -35,6 +35,7 @@ defmodule Brekitdown.Tasks do
       tasks =
         Task
         |> where(user_id: ^scope.user.id)
+        |> with_has_children()
         |> preload(^preload)
         |> Flop.with_named_bindings(flop, &join_task_assoc/2, opts)
         |> Flop.all(flop, opts)
@@ -56,6 +57,7 @@ defmodule Brekitdown.Tasks do
 
   def list_children(%Scope{} = scope, %Task{} = parent, preload) do
     Task
+    |> with_has_children()
     |> preload(^preload)
     |> Repo.all_by(user_id: scope.user.id, parent_id: parent.id)
   end
@@ -78,6 +80,7 @@ defmodule Brekitdown.Tasks do
 
   def get_task!(%Scope{} = scope, reference_xid, preload) do
     Task
+    |> with_has_children()
     |> preload(^preload)
     |> Repo.get_by!(reference_xid: reference_xid, user_id: scope.user.id)
   end
@@ -99,6 +102,7 @@ defmodule Brekitdown.Tasks do
 
   def get_task(%Scope{} = scope, reference_xid, preload) do
     Task
+    |> with_has_children()
     |> preload(^preload)
     |> Repo.get_by(reference_xid: reference_xid, user_id: scope.user.id)
   end
@@ -312,5 +316,19 @@ defmodule Brekitdown.Tasks do
 
   defp join_task_assoc(query, :goal) do
     join(query, :inner, [t], g in assoc(t, :goal), as: :goal)
+  end
+
+  defp with_has_children(query) do
+    from task in query,
+      as: :task,
+      select_merge: %{
+        has_children:
+          exists(
+            from child in Task,
+              where:
+                child.parent_id == parent_as(:task).id and
+                  child.user_id == parent_as(:task).user_id
+          )
+      }
   end
 end
