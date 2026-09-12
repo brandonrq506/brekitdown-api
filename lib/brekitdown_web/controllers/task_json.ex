@@ -2,6 +2,7 @@ defmodule BrekitdownWeb.TaskJSON do
   alias Brekitdown.Goals.Goal
   alias Brekitdown.Tags.Tag
   alias Brekitdown.Tasks.Task
+  alias Brekitdown.TimeEntries.TimeEntry
 
   @doc "Renders a list of tasks."
   def index(%{tasks: tasks}) do
@@ -23,6 +24,7 @@ defmodule BrekitdownWeb.TaskJSON do
       goal_reference_xid: goal_reference_xid(task.goal),
       parent_reference_xid: parent_reference_xid(task.parent),
       tags: tags(task.tags),
+      time_entries: time_entries(task.time_entries),
       inserted_at: task.inserted_at,
       updated_at: task.updated_at
     }
@@ -46,4 +48,18 @@ defmodule BrekitdownWeb.TaskJSON do
   end
 
   defp tags(_), do: []
+
+  defp time_entries(time_entries) when is_list(time_entries) do
+    for %TimeEntry{} = time_entry <- time_entries do
+      %{
+        reference_xid: time_entry.reference_xid,
+        started_at: time_entry.started_at,
+        ended_at: time_entry.ended_at,
+        inserted_at: time_entry.inserted_at,
+        updated_at: time_entry.updated_at
+      }
+    end
+  end
+
+  defp time_entries(_), do: []
 end
