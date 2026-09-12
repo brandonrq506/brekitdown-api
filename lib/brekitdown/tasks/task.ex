@@ -27,6 +27,7 @@ defmodule Brekitdown.Tasks.Task do
     field :due_at, :utc_datetime
     field :reference_xid, Ecto.UUID, read_after_writes: true
     field :user_id, :id
+    field :has_children, :boolean, virtual: true, default: false
 
     belongs_to :goal, Brekitdown.Goals.Goal
     belongs_to :parent, Brekitdown.Tasks.Task

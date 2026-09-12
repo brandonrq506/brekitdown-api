@@ -39,6 +39,22 @@ defmodule BrekitdownWeb.TaskControllerTest do
       assert assert_response_schema(conn, 200, "TasksResponse")["data"] == []
     end
 
+    test "reports whether each task has children", %{conn: conn, scope: scope} do
+      parent = task_fixture(scope)
+      child = task_fixture(scope, %{parent_reference_xid: parent.reference_xid})
+
+      conn = get(conn, ~p"/api/tasks")
+      tasks = assert_response_schema(conn, 200, "TasksResponse")["data"]
+
+      has_children_by_reference =
+        Map.new(tasks, fn task -> {task["reference_xid"], task["has_children"]} end)
+
+      assert has_children_by_reference == %{
+               parent.reference_xid => true,
+               child.reference_xid => false
+             }
+    end
+
     test "includes the task's time entries ordered by started_at", %{conn: conn, scope: scope} do
       task = task_fixture(scope)
 
@@ -153,7 +169,8 @@ defmodule BrekitdownWeb.TaskControllerTest do
                "name" => "Write tests",
                "status" => "in_progress",
                "goal_reference_xid" => nil,
-               "parent_reference_xid" => nil
+               "parent_reference_xid" => nil,
+               "has_children" => false
              } = created
 
       assert is_binary(created["inserted_at"])
@@ -263,11 +280,17 @@ defmodule BrekitdownWeb.TaskControllerTest do
 
     test "renders the task when data is valid", %{
       conn: conn,
+      scope: scope,
       task: %Task{reference_xid: ref} = task
     } do
+      _child = task_fixture(scope, %{parent_reference_xid: task.reference_xid})
       conn = put(conn, ~p"/api/tasks/#{task}", task: @update_attrs)
 
-      assert %{"reference_xid" => ^ref, "name" => "Write more tests"} =
+      assert %{
+               "reference_xid" => ^ref,
+               "name" => "Write more tests",
+               "has_children" => true
+             } =
                assert_response_schema(conn, 200, "TaskResponse")["data"]
     end
 
@@ -302,6 +325,21 @@ defmodule BrekitdownWeb.TaskControllerTest do
     test "404s for another user's task", %{conn: conn} do
       other = task_fixture(user_scope_fixture())
       assert_error_sent 404, fn -> delete(conn, ~p"/api/tasks/#{other}") end
+    end
+
+    test "a parent reports no children after its last child is deleted", %{
+      conn: conn,
+      scope: scope
+    } do
+      parent = task_fixture(scope)
+      child = task_fixture(scope, %{parent_reference_xid: parent.reference_xid})
+
+      assert response(delete(conn, ~p"/api/tasks/#{child}"), 204)
+
+      conn = get(conn, ~p"/api/tasks/#{parent}")
+
+      assert %{"has_children" => false} =
+               assert_response_schema(conn, 200, "TaskResponse")["data"]
     end
   end
 
