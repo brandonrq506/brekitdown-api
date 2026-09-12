@@ -24,7 +24,7 @@ defmodule Brekitdown.TimeEntries do
   def list_time_entries_by_task(%Scope{} = scope, %Task{} = task) do
     TimeEntry
     |> where([te], te.task_id == ^task.id)
-    |> order_by([te], asc: te.started_at)
+    |> order_by([te], asc: te.started_at, asc: te.id)
     |> Repo.all_by(user_id: scope.user.id)
   end
 

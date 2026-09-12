@@ -31,7 +31,9 @@ defmodule Brekitdown.Tasks.Task do
     belongs_to :goal, Brekitdown.Goals.Goal
     belongs_to :parent, Brekitdown.Tasks.Task
 
-    has_many :time_entries, Brekitdown.TimeEntries.TimeEntry
+    has_many :time_entries, Brekitdown.TimeEntries.TimeEntry,
+      preload_order: [asc: :started_at, asc: :id]
+
     has_many :subtasks, Brekitdown.Tasks.Task, foreign_key: :parent_id
 
     many_to_many :tags, Brekitdown.Tags.Tag, join_through: Brekitdown.Tags.TaskTag

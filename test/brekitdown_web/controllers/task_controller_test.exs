@@ -3,6 +3,7 @@ defmodule BrekitdownWeb.TaskControllerTest do
 
   import Brekitdown.TasksFixtures
   import Brekitdown.GoalsFixtures
+  import Brekitdown.TimeEntriesFixtures
   import Brekitdown.AccountsFixtures, only: [user_scope_fixture: 0]
 
   alias Brekitdown.Tasks.Task
@@ -36,6 +37,54 @@ defmodule BrekitdownWeb.TaskControllerTest do
     test "returns an empty list when the user has no tasks", %{conn: conn} do
       conn = get(conn, ~p"/api/tasks")
       assert assert_response_schema(conn, 200, "TasksResponse")["data"] == []
+    end
+
+    test "includes the task's time entries ordered by started_at", %{conn: conn, scope: scope} do
+      task = task_fixture(scope)
+
+      later_entry =
+        time_entry_fixture(scope, task, %{
+          started_at: ~U[2026-09-11 10:00:00Z],
+          ended_at: ~U[2026-09-11 11:00:00Z]
+        })
+
+      earlier_entry =
+        time_entry_fixture(scope, task, %{
+          started_at: ~U[2026-09-11 08:00:00Z],
+          ended_at: ~U[2026-09-11 09:30:00Z]
+        })
+
+      conn = get(conn, ~p"/api/tasks")
+      body = assert_response_schema(conn, 200, "TasksResponse")
+
+      assert [
+               %{
+                 "reference_xid" => task_reference_xid,
+                 "time_entries" => [
+                   %{
+                     "reference_xid" => earlier_entry_reference_xid,
+                     "started_at" => "2026-09-11T08:00:00Z",
+                     "ended_at" => "2026-09-11T09:30:00Z",
+                     "inserted_at" => inserted_at,
+                     "updated_at" => updated_at
+                   } = rendered_time_entry,
+                   %{
+                     "reference_xid" => later_entry_reference_xid,
+                     "started_at" => "2026-09-11T10:00:00Z",
+                     "ended_at" => "2026-09-11T11:00:00Z"
+                   }
+                 ]
+               }
+             ] = body["data"]
+
+      assert task_reference_xid == task.reference_xid
+      assert earlier_entry_reference_xid == earlier_entry.reference_xid
+      assert later_entry_reference_xid == later_entry.reference_xid
+      assert is_binary(inserted_at)
+      assert is_binary(updated_at)
+      refute Map.has_key?(rendered_time_entry, "id")
+      refute Map.has_key?(rendered_time_entry, "user_id")
+      refute Map.has_key?(rendered_time_entry, "task_id")
     end
 
     test "filters tasks by goal_reference_xid", %{conn: conn, scope: scope} do
