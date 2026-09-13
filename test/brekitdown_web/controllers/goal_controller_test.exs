@@ -65,6 +65,8 @@ defmodule BrekitdownWeb.GoalControllerTest do
 
       assert is_binary(created["inserted_at"])
       assert is_binary(created["updated_at"])
+      assert is_nil(created["archived_at"])
+      assert is_nil(created["starred_at"])
 
       # internal columns must never be exposed
       refute Map.has_key?(created, "id")
@@ -119,6 +121,31 @@ defmodule BrekitdownWeb.GoalControllerTest do
       assert %{
                "name" => "some name",
                "description" => "updated description"
+             } = assert_response_schema(conn, 200, "GoalResponse")["data"]
+    end
+
+    test "sets and clears the goal organization timestamps", %{conn: conn, goal: goal} do
+      timestamp = "2026-09-13T12:00:00Z"
+
+      conn =
+        put(conn, ~p"/api/goals/#{goal}", goal: %{archived_at: timestamp, starred_at: timestamp})
+
+      assert %{
+               "archived_at" => ^timestamp,
+               "starred_at" => ^timestamp
+             } = assert_response_schema(conn, 200, "GoalResponse")["data"]
+
+      conn =
+        conn
+        |> recycle()
+        |> put_req_header("content-type", "application/json")
+        |> put(~p"/api/goals/#{goal}",
+          goal: %{archived_at: nil, starred_at: nil}
+        )
+
+      assert %{
+               "archived_at" => nil,
+               "starred_at" => nil
              } = assert_response_schema(conn, 200, "GoalResponse")["data"]
     end
 
