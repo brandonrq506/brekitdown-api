@@ -12,7 +12,9 @@ defmodule BrekitdownWeb.Schemas.GoalUpdateRequest do
         minProperties: 1,
         properties: %{
           name: %Schema{type: :string, maxLength: 100},
-          description: %Schema{type: :string, nullable: true}
+          description: %Schema{type: :string, nullable: true},
+          archived_at: %Schema{type: :string, format: :"date-time", nullable: true},
+          starred_at: %Schema{type: :string, format: :"date-time", nullable: true}
         }
       }
     },

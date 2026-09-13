@@ -23,6 +23,8 @@ defmodule Brekitdown.Goals.Goal do
   schema "goals" do
     field :name, :string
     field :description, :string
+    field :archived_at, :utc_datetime
+    field :starred_at, :utc_datetime
     field :reference_xid, Ecto.UUID, read_after_writes: true
     field :user_id, :id
 
@@ -34,7 +36,7 @@ defmodule Brekitdown.Goals.Goal do
   @doc false
   def changeset(goal, attrs, user_scope) do
     goal
-    |> cast(attrs, [:name, :description])
+    |> cast(attrs, [:name, :description, :archived_at, :starred_at])
     |> validate_required([:name])
     |> validate_length(:name, max: 100)
     |> put_change(:user_id, user_scope.user.id)

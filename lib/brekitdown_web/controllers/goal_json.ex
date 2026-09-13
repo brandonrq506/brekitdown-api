@@ -24,6 +24,8 @@ defmodule BrekitdownWeb.GoalJSON do
       reference_xid: goal.reference_xid,
       description: goal.description,
       name: goal.name,
+      archived_at: goal.archived_at,
+      starred_at: goal.starred_at,
       inserted_at: goal.inserted_at,
       updated_at: goal.updated_at
     }

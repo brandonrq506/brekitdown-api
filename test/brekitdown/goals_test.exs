@@ -51,6 +51,8 @@ defmodule Brekitdown.GoalsTest do
       assert {:ok, %Goal{} = goal} = Goals.create_goal(scope, valid_attrs)
       assert goal.name == "some name"
       assert goal.description == "some description"
+      assert is_nil(goal.archived_at)
+      assert is_nil(goal.starred_at)
       assert goal.user_id == scope.user.id
     end
 
@@ -79,6 +81,30 @@ defmodule Brekitdown.GoalsTest do
       assert {:ok, %Goal{} = goal} = Goals.update_goal(scope, goal, update_attrs)
       assert goal.name == "some updated name"
       assert goal.description == "some updated description"
+    end
+
+    test "update_goal/3 sets and clears goal organization timestamps" do
+      scope = user_scope_fixture()
+      goal = goal_fixture(scope)
+      timestamp = ~U[2026-09-13 12:00:00Z]
+
+      assert {:ok, %Goal{} = goal} =
+               Goals.update_goal(scope, goal, %{
+                 archived_at: timestamp,
+                 starred_at: timestamp
+               })
+
+      assert goal.archived_at == timestamp
+      assert goal.starred_at == timestamp
+
+      assert {:ok, %Goal{} = goal} =
+               Goals.update_goal(scope, goal, %{
+                 archived_at: nil,
+                 starred_at: nil
+               })
+
+      assert is_nil(goal.archived_at)
+      assert is_nil(goal.starred_at)
     end
 
     test "update_goal/3 with invalid scope raises" do
