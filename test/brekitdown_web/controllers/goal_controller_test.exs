@@ -44,6 +44,18 @@ defmodule BrekitdownWeb.GoalControllerTest do
                assert_response_schema(conn, 200, "GoalsResponse")
     end
 
+    test "lists starred goals first and alphabetizes each group", %{conn: conn, scope: scope} do
+      goal_fixture(scope, %{name: "Zebra"})
+      goal_fixture(scope, %{name: "Yarrow", starred_at: ~U[2026-09-13 12:00:00Z]})
+      goal_fixture(scope, %{name: "Apple"})
+      goal_fixture(scope, %{name: "Birch", starred_at: ~U[2026-09-13 11:00:00Z]})
+
+      conn = get(conn, ~p"/api/goals")
+
+      assert Enum.map(assert_response_schema(conn, 200, "GoalsResponse")["data"], & &1["name"]) ==
+               ["Birch", "Yarrow", "Apple", "Zebra"]
+    end
+
     test "rejects a page size outside the configured choices", %{conn: conn} do
       conn = get(conn, ~p"/api/goals?page_size=15")
 

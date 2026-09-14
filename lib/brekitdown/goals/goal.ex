@@ -1,20 +1,29 @@
 defmodule Brekitdown.Goals.Goal do
   use Ecto.Schema
   import Ecto.Changeset
+  import Ecto.Query
 
   @page_sizes [10, 20, 30, 40, 50]
 
   @derive {
     Flop.Schema,
     filterable: [],
-    sortable: [:name],
+    sortable: [:starred, :name],
+    adapter_opts: [
+      custom_fields: [
+        starred: [
+          field_dynamic: {__MODULE__, :starred_dynamic, []},
+          ecto_type: :boolean
+        ]
+      ]
+    ],
     default_limit: 20,
     max_limit: 50,
     pagination_types: [:page],
     default_pagination_type: :page,
     default_order: %{
-      order_by: [:name],
-      order_directions: [:asc]
+      order_by: [:starred, :name],
+      order_directions: [:desc, :asc]
     }
   }
 
@@ -43,4 +52,6 @@ defmodule Brekitdown.Goals.Goal do
   end
 
   def page_sizes, do: @page_sizes
+
+  def starred_dynamic(_opts), do: dynamic([goal], not is_nil(goal.starred_at))
 end
