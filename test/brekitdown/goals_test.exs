@@ -28,6 +28,24 @@ defmodule Brekitdown.GoalsTest do
       assert other_result == other_goal
     end
 
+    test "paginated_list/2 lists starred goals first and alphabetizes each group" do
+      scope = user_scope_fixture()
+
+      unstarred_zebra = goal_fixture(scope, %{name: "Zebra"})
+
+      starred_yarrow =
+        goal_fixture(scope, %{name: "Yarrow", starred_at: ~U[2026-09-13 12:00:00Z]})
+
+      unstarred_apple = goal_fixture(scope, %{name: "Apple"})
+
+      starred_birch =
+        goal_fixture(scope, %{name: "Birch", starred_at: ~U[2026-09-13 11:00:00Z]})
+
+      assert {:ok, {goals, %Flop.Meta{total_count: 4}}} = Goals.paginated_list(scope)
+
+      assert goals == [starred_birch, starred_yarrow, unstarred_apple, unstarred_zebra]
+    end
+
     test "page size menu is consistent with Flop limits" do
       assert Enum.max(Goal.page_sizes()) == Flop.Schema.max_limit(%Goal{})
       assert Flop.Schema.default_limit(%Goal{}) in Goal.page_sizes()
