@@ -15,9 +15,21 @@ Anything that looks like a frontend feature here is either a mistake, or somethi
 Sendero is a Goals app.
 It has primitives like `Users`, `Goals`, `Tasks`, `Tags` and `TimeEntries`.
 
-At the core of the application is an AI agent (Not yet implemented).
-This agent will help you break down tasks into smaller bite-size tasks to reduce mental overload and anxiety.
-This agent will also learn user patterns, energy level and motivation mechanisms, and will use it to recommend tasks based on multi-dimensional criteria, such as: time of the day, energy level, motivation level, task due date, priority, etc.
+At the core of the application is an AI agent (not yet implemented).
+This agent will help users break down tasks into smaller, bite-sized tasks to reduce mental overload and anxiety.
+
+The long-term primary task workflow will be a recommendation list. A task will be eligible when it:
+
+- Is `scheduled` or `in_progress`.
+- Has no unmet dependencies.
+- Is a leaf task (no children).
+
+Recommendations will be ranked using criteria that may include:
+
+- The user's available time, energy, and motivation.
+- Time of day.
+- Task due date, priority, and completion percentage.
+- Patterns learned by the AI agent.
 
 ## What's made of
 

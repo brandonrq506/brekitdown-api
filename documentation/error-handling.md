@@ -148,10 +148,10 @@ path.
 **Why.** Two reasons compound here. The repo's existing rule is that anything a product decision
 could change belongs in app code, not in a migration. On top of that, letting a constraint surface
 the error costs you control of the message: a `unique_constraint` violation arrives as a changeset
-error, which means a 422 naming whatever field you attached it to. The one-open-entry-per-task rule
+error, which means a 422 naming whatever field you attached it to. The one-running-entry-per-task rule
 originally reported `{"errors": {"task_id": ["has already been taken"]}}` — a column the client
 never sent and cannot see. The app-level guard in `Brekitdown.TimeEntries` returns
-`:entry_already_running` instead, and `:time_entries_one_open_per_task_index` stays in place to make
+`:entry_already_running` instead, and `:time_entries_one_running_per_task_index` stays in place to make
 the invariant impossible to violate.
 
 **Cost.** Check-then-insert is a race. Two simultaneous requests can both pass the guard, and the
@@ -233,7 +233,7 @@ blank"`), and a validation error with no field path is keyed `"body"`.
 
 - **A 422 body names whatever you `cast`.** `ChangesetJSON` emits the changeset's own field names, so
   an internal column in a `cast` list or a `unique_constraint` target becomes part of your public
-  error contract. This is exactly how the one-open-entry rule ended up reporting `task_id`. Check
+  error contract. This is exactly how the one-running-entry rule ended up reporting `task_id`. Check
   what a new changeset error is _called_ before shipping it.
 
 - **401 bypasses `FallbackController`.** Changing the error envelope means changing `user_auth.ex`

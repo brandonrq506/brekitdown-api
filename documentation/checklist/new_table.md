@@ -1,0 +1,6 @@
+# Checklist for Adding a New Table
+
+- [ ] Add a new migration with `mix phx.gen.json`.
+- [ ] Update the migration to all all the fields, the `reference_xid` column, and the proper nullability constraints.
+- [ ] Update the schema module accordingly.
+- [ ] Update associations in the schema module accordingly.
