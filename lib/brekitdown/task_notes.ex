@@ -29,6 +29,29 @@ defmodule Brekitdown.TaskNotes do
   end
 
   @doc """
+  Gets a single note for a task.
+
+  Raises `Ecto.NoResultsError` if the TaskNote does not exist.
+
+  Scoped by `task_id` *and* `reference_xid`, so asking for a real note under the wrong
+  task is a 404 rather than a silent success.
+
+  ## Examples
+
+      iex> get_task_note!(scope, task, "550e8400-e29b-41d4-a716-446655440000")
+      %TaskNote{}
+
+      iex> get_task_note!(scope, task, "550e8400-e29b-41d4-a716-446655440001")
+      ** (Ecto.NoResultsError)
+
+  """
+  def get_task_note!(%Scope{} = scope, %Task{} = task, reference_xid) do
+    true = task.user_id == scope.user.id
+
+    Repo.get_by!(TaskNote, task_id: task.id, reference_xid: reference_xid)
+  end
+
+  @doc """
   Creates a note on a task.
 
   ## Examples
