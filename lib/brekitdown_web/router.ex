@@ -42,6 +42,7 @@ defmodule BrekitdownWeb.Router do
       resources "/goals", GoalController, except: [:new, :edit]
 
       resources "/tasks", TaskController, except: [:new, :edit] do
+        resources "/notes", TaskNoteController, only: [:index, :create, :update, :delete]
         resources "/tags", TaskTagController, only: [:create, :delete]
         resources "/time_entries", TimeEntryController, only: [:index, :create, :update, :delete]
       end

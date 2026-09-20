@@ -41,7 +41,8 @@ defmodule BrekitdownWeb.TaskTagController do
     scope = conn.assigns.current_scope
     task = Tasks.get_task!(scope, task_xid)
 
-    with {:ok, task} <- Tasks.attach_tag(scope, task, name, [:goal, :tags]) do
+    with {:ok, task} <-
+           Tasks.attach_tag(scope, task, name, [:goal, :tags, :parent, :time_entries]) do
       conn
       |> put_view(BrekitdownWeb.TaskJSON)
       |> render(:show, task: task)
