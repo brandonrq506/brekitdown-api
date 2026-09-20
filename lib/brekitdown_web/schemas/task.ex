@@ -2,6 +2,7 @@ defmodule BrekitdownWeb.Schemas.Task do
   @moduledoc "Public representation of a task (never the internal ids)."
   require OpenApiSpex
   alias BrekitdownWeb.Schemas.Tag
+  alias BrekitdownWeb.Schemas.TaskStatus
   alias BrekitdownWeb.Schemas.TimeEntry
   alias OpenApiSpex.Schema
 
@@ -13,10 +14,7 @@ defmodule BrekitdownWeb.Schemas.Task do
       reference_xid: %Schema{type: :string, format: :uuid},
       name: %Schema{type: :string, maxLength: 100},
       description: %Schema{type: :string, maxLength: 2000},
-      status: %Schema{
-        type: :string,
-        enum: ["scheduled", "in_progress", "completed", "dropped", "on_hold"]
-      },
+      status: TaskStatus,
       due_at: %Schema{type: :string, format: :"date-time", nullable: true},
       goal_reference_xid: %Schema{type: :string, format: :uuid, nullable: true},
       parent_reference_xid: %Schema{type: :string, format: :uuid, nullable: true},

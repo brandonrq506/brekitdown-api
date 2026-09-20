@@ -335,9 +335,25 @@ defmodule BrekitdownWeb.TaskControllerTest do
                assert_response_schema(conn, 200, "TaskResponse")["data"]
     end
 
+    test "updates only the status when nothing else is sent", %{conn: conn, task: task} do
+      conn = put(conn, ~p"/api/tasks/#{task}", task: %{status: "completed"})
+
+      assert %{"name" => "Task 1", "status" => "completed"} =
+               assert_response_schema(conn, 200, "TaskResponse")["data"]
+    end
+
     test "renders errors when data is invalid", %{conn: conn, task: task} do
       conn = put(conn, ~p"/api/tasks/#{task}", task: @invalid_attrs)
       assert %{"errors" => _} = assert_response_schema(conn, 422, "ChangesetError")
+    end
+
+    # Rejected by the schema's enum before the action runs, so this 422 comes from
+    # ValidationErrorPlug rather than ChangesetJSON.
+    test "renders an error for a status outside the enum", %{conn: conn, task: task} do
+      conn = put(conn, ~p"/api/tasks/#{task}", task: %{status: "abandoned"})
+
+      assert %{"errors" => %{"status" => [_ | _]}} =
+               assert_response_schema(conn, 422, "ChangesetError")
     end
 
     test "404s for another user's task", %{conn: conn} do
