@@ -19,7 +19,8 @@ defmodule BrekitdownWeb.Schemas.TaskNoteUpdateRequest do
           title: %Schema{type: :string, maxLength: 100},
           body: %Schema{type: :string, maxLength: 5000}
         },
-        minProperties: 1
+        minProperties: 1,
+        additionalProperties: false
       }
     },
     required: [:note],
