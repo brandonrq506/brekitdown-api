@@ -16,10 +16,7 @@ defmodule BrekitdownWeb.TaskController do
     TaskUpdateRequest
   }
 
-  # A list read carries `notes_count` instead of the bodies: /api/tasks has no pagination,
-  # so preloading notes there multiplies two unbounded things.
-  @list_preloads [:goal, :tags, :parent, :time_entries]
-  @show_preloads [:goal, :tags, :parent, :time_entries, :notes]
+  @preloads [:goal, :tags, :parent, :time_entries]
 
   action_fallback BrekitdownWeb.FallbackController
   plug OpenApiSpex.Plug.CastAndValidate, render_error: BrekitdownWeb.ValidationErrorPlug
@@ -47,7 +44,7 @@ defmodule BrekitdownWeb.TaskController do
 
   def index(conn, params) do
     with {:ok, tasks} <-
-           Tasks.list_tasks(conn.assigns.current_scope, params, @list_preloads) do
+           Tasks.list_tasks(conn.assigns.current_scope, params, @preloads) do
       render(conn, :index, tasks: tasks)
     end
   end
@@ -69,7 +66,7 @@ defmodule BrekitdownWeb.TaskController do
     with {:ok, %Task{} = task} <- Tasks.create_task(conn.assigns.current_scope, task_params) do
       conn
       |> put_status(:created)
-      |> render(:show, task: Repo.preload(task, @show_preloads))
+      |> render(:show, task: Repo.preload(task, @preloads))
     end
   end
 
@@ -87,7 +84,7 @@ defmodule BrekitdownWeb.TaskController do
   )
 
   def show(conn, %{id: id}) do
-    task = Tasks.get_task!(conn.assigns.current_scope, id, @show_preloads)
+    task = Tasks.get_task!(conn.assigns.current_scope, id, @preloads)
     render(conn, :show, task: task)
   end
 
@@ -109,7 +106,7 @@ defmodule BrekitdownWeb.TaskController do
   def update(conn, %{id: id}) do
     %TaskUpdateRequest{task: task_params} = OpenApiSpex.body_params(conn)
 
-    task = Tasks.get_task!(conn.assigns.current_scope, id, @show_preloads)
+    task = Tasks.get_task!(conn.assigns.current_scope, id, @preloads)
 
     with {:ok, %Task{} = task} <- Tasks.update_task(conn.assigns.current_scope, task, task_params) do
       render(conn, :show, task: task)

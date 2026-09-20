@@ -28,6 +28,7 @@ defmodule Brekitdown.Tasks.Task do
     field :reference_xid, Ecto.UUID, read_after_writes: true
     field :user_id, :id
     field :has_children, :boolean, virtual: true, default: false
+    field :notes_count, :integer, virtual: true, default: 0
 
     belongs_to :goal, Brekitdown.Goals.Goal
     belongs_to :parent, Brekitdown.Tasks.Task

@@ -21,6 +21,11 @@ defmodule BrekitdownWeb.Schemas.Task do
       goal_reference_xid: %Schema{type: :string, format: :uuid, nullable: true},
       parent_reference_xid: %Schema{type: :string, format: :uuid, nullable: true},
       has_children: %Schema{type: :boolean},
+      notes_count: %Schema{
+        type: :integer,
+        minimum: 0,
+        description: "Fetch the notes themselves from /api/tasks/{task_id}/notes."
+      },
       tags: %Schema{type: :array, items: Tag},
       time_entries: %Schema{type: :array, items: TimeEntry},
       inserted_at: %Schema{type: :string, format: :"date-time"},
@@ -32,6 +37,7 @@ defmodule BrekitdownWeb.Schemas.Task do
       :description,
       :status,
       :has_children,
+      :notes_count,
       :inserted_at,
       :updated_at
     ],
@@ -44,6 +50,7 @@ defmodule BrekitdownWeb.Schemas.Task do
       goal_reference_xid: "123e4567-e89b-12d3-a456-426614174001",
       parent_reference_xid: "123e4567-e89b-12d3-a456-426614174002",
       has_children: true,
+      notes_count: 1,
       tags: [],
       time_entries: [
         %{
