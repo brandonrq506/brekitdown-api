@@ -331,12 +331,23 @@ defmodule Brekitdown.TasksTest do
       assert updated.due_at == new_due
     end
 
-    test "ignores status (not settable via the generic update)" do
+    test "updates status" do
       scope = user_scope_fixture()
       task = task_fixture(scope)
 
-      assert {:ok, updated} = Tasks.update_task(scope, task, %{name: "x", status: :completed})
-      assert updated.status == :scheduled
+      assert {:ok, updated} = Tasks.update_task(scope, task, %{status: :completed})
+      assert updated.status == :completed
+    end
+
+    test "with an unknown status errors and leaves the row unchanged" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope)
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Tasks.update_task(scope, task, %{status: :abandoned})
+
+      assert "is invalid" in errors_on(changeset).status
+      assert Tasks.get_task!(scope, task.reference_xid).status == task.status
     end
 
     test "with invalid data errors and leaves the row unchanged" do

@@ -57,7 +57,7 @@ defmodule Brekitdown.Tasks.Task do
   @doc false
   def update_changeset(task, attrs) do
     task
-    |> cast(attrs, [:name, :description, :due_at])
+    |> cast(attrs, [:name, :description, :status, :due_at])
     |> validate_required([:name])
     |> validate_length(:name, max: 100)
     |> validate_length(:description, max: 2000)
