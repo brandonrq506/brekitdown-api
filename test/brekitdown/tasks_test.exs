@@ -7,6 +7,7 @@ defmodule Brekitdown.TasksTest do
   alias Brekitdown.Tasks.Task
 
   import Brekitdown.AccountsFixtures, only: [user_scope_fixture: 0]
+  import Brekitdown.TaskNotesFixtures
   import Brekitdown.TasksFixtures
   import Brekitdown.GoalsFixtures
   import Brekitdown.TagsFixtures
@@ -78,6 +79,30 @@ defmodule Brekitdown.TasksTest do
       assert length(tasks) == 3
     end
 
+    test "counts each task's notes, reporting 0 rather than nil for a bare task" do
+      scope = user_scope_fixture()
+      with_notes = task_fixture(scope)
+      bare = task_fixture(scope, %{name: "Bare"})
+      task_note_fixture(scope, with_notes)
+      task_note_fixture(scope, with_notes, %{title: "Second"})
+
+      {:ok, tasks} = Tasks.list_tasks(scope)
+      counts = Map.new(tasks, &{&1.id, &1.notes_count})
+
+      assert counts == %{with_notes.id => 2, bare.id => 0}
+    end
+
+    # The only place the notes subquery and Flop's :goal join have to coexist.
+    test "keeps notes_count under a goal filter" do
+      scope = user_scope_fixture()
+      goal = goal_fixture(scope)
+      task = task_fixture(scope, %{goal_reference_xid: goal.reference_xid})
+      task_note_fixture(scope, task)
+
+      assert {:ok, [listed]} = Tasks.list_tasks(scope, goal_filter(goal.reference_xid))
+      assert listed.notes_count == 1
+    end
+
     test "public filter allowlist is exactly goal_reference_xid" do
       assert Flop.Schema.filterable(%Task{}) == [:goal_reference_xid]
     end
@@ -88,6 +113,14 @@ defmodule Brekitdown.TasksTest do
       scope = user_scope_fixture()
       task = task_fixture(scope)
       assert Tasks.get_task!(scope, task.reference_xid).id == task.id
+    end
+
+    test "agrees with list_tasks/3 on notes_count" do
+      scope = user_scope_fixture()
+      task = task_fixture(scope)
+      task_note_fixture(scope, task)
+
+      assert Tasks.get_task!(scope, task.reference_xid).notes_count == 1
     end
 
     test "hides another user's task" do

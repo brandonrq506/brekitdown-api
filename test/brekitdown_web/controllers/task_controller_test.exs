@@ -1,6 +1,7 @@
 defmodule BrekitdownWeb.TaskControllerTest do
   use BrekitdownWeb.ConnCase, async: true
 
+  import Brekitdown.TaskNotesFixtures
   import Brekitdown.TasksFixtures
   import Brekitdown.GoalsFixtures
   import Brekitdown.TimeEntriesFixtures
@@ -53,6 +54,25 @@ defmodule BrekitdownWeb.TaskControllerTest do
                parent.reference_xid => true,
                child.reference_xid => false
              }
+    end
+
+    test "reports notes_count without inlining the notes", %{conn: conn, scope: scope} do
+      task = task_fixture(scope)
+      _note = task_note_fixture(scope, task)
+      _other = task_note_fixture(scope, task, %{title: "Second"})
+
+      conn = get(conn, ~p"/api/tasks")
+      assert [listed] = assert_response_schema(conn, 200, "TasksResponse")["data"]
+
+      assert listed["notes_count"] == 2
+      refute Map.has_key?(listed, "notes")
+    end
+
+    test "notes_count is 0 for a task with no notes", %{conn: conn, scope: scope} do
+      _task = task_fixture(scope)
+
+      conn = get(conn, ~p"/api/tasks")
+      assert [%{"notes_count" => 0}] = assert_response_schema(conn, 200, "TasksResponse")["data"]
     end
 
     test "includes the task's time entries ordered by started_at", %{conn: conn, scope: scope} do
@@ -170,7 +190,8 @@ defmodule BrekitdownWeb.TaskControllerTest do
                "status" => "in_progress",
                "goal_reference_xid" => nil,
                "parent_reference_xid" => nil,
-               "has_children" => false
+               "has_children" => false,
+               "notes_count" => 0
              } = created
 
       assert is_binary(created["inserted_at"])
@@ -263,6 +284,18 @@ defmodule BrekitdownWeb.TaskControllerTest do
     test "404s for another user's task", %{conn: conn} do
       other = task_fixture(user_scope_fixture())
       assert_error_sent 404, fn -> get(conn, ~p"/api/tasks/#{other}") end
+    end
+
+    test "reports notes_count and never the notes themselves", %{conn: conn, scope: scope} do
+      task = task_fixture(scope)
+      task_note_fixture(scope, task, %{title: "Older"})
+      task_note_fixture(scope, task, %{title: "Newer"})
+
+      conn = get(conn, ~p"/api/tasks/#{task}")
+      data = assert_response_schema(conn, 200, "TaskResponse")["data"]
+
+      assert data["notes_count"] == 2
+      refute Map.has_key?(data, "notes")
     end
 
     test "returns the parent_reference_xid of a child task", %{conn: conn, scope: scope} do
