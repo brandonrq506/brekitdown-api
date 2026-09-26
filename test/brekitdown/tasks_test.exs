@@ -104,7 +104,7 @@ defmodule Brekitdown.TasksTest do
     end
 
     test "public filter allowlist is exactly goal_reference_xid" do
-      assert Flop.Schema.filterable(%Task{}) == [:goal_reference_xid]
+      assert Flop.allowed_fields(:filterable, for: Task) == [:goal_reference_xid]
     end
   end
 

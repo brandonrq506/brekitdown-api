@@ -47,8 +47,8 @@ defmodule Brekitdown.GoalsTest do
     end
 
     test "page size menu is consistent with Flop limits" do
-      assert Enum.max(Goal.page_sizes()) == Flop.Schema.max_limit(%Goal{})
-      assert Flop.Schema.default_limit(%Goal{}) in Goal.page_sizes()
+      assert Enum.max(Goal.page_sizes()) == Flop.get_option(:max_limit, for: Goal)
+      assert Flop.get_option(:default_limit, for: Goal) in Goal.page_sizes()
     end
 
     test "get_goal!/2 returns the scoped goal with the given reference_xid" do
