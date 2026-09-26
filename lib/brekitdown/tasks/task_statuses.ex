@@ -5,6 +5,7 @@ defmodule Brekitdown.Tasks.TaskStatuses do
 
   @all [:scheduled, :in_progress, :completed, :dropped, :on_hold]
   @default :scheduled
+  @recommendable [:scheduled, :in_progress]
 
   @doc """
   Returns all valid task statuses.
@@ -15,6 +16,9 @@ defmodule Brekitdown.Tasks.TaskStatuses do
   Returns the default task status.
   """
   def default, do: @default
+
+  @doc "Statuses eligible for the recommendation list."
+  def recommendable, do: @recommendable
 
   @doc """
   Asserts a term is a valid task status.

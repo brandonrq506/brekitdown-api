@@ -14,7 +14,7 @@ defmodule BrekitdownWeb.TaskJSON do
     %{data: data(task)}
   end
 
-  defp data(%Task{} = task) do
+  def data(%Task{} = task) do
     %{
       reference_xid: task.reference_xid,
       name: task.name,

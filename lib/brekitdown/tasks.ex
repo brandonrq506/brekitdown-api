@@ -12,6 +12,19 @@ defmodule Brekitdown.Tasks do
   alias Brekitdown.Tags.TaskTag
   alias Brekitdown.TaskNotes.TaskNote
   alias Brekitdown.Tasks.Task
+  alias Brekitdown.Tasks.TaskStatuses
+
+  @recommendation_opts [
+    for: Task,
+    filtering: false,
+    # Client can't change the ordering.
+    ordering: false,
+    default_order: %{order_by: [:due_at], order_directions: [:asc]},
+    pagination_types: [:first],
+    default_pagination_type: :first,
+    default_limit: 20,
+    max_limit: 50
+  ]
 
   @doc """
   Returns the scoped tasks matching the given Flop parameters.
@@ -61,6 +74,22 @@ defmodule Brekitdown.Tasks do
     |> with_derived_fields()
     |> preload(^preload)
     |> Repo.all_by(user_id: scope.user.id, parent_id: parent.id)
+  end
+
+  @doc """
+  Tasks the user should work on next: scheduled or in progress, with a due date, soonest first.
+  Cursor-paginated. The rules are server-owned on purpose.
+
+  Returns `{:ok, {tasks, %Flop.Meta{}}}` or `{:error, %Flop.Meta{}}`.
+  """
+  def list_recommended(%Scope{} = scope, flop_params \\ %{}) do
+    Task
+    |> where(user_id: ^scope.user.id)
+    |> where([t], t.status in ^TaskStatuses.recommendable())
+    |> where([t], not is_nil(t.due_at))
+    |> with_derived_fields()
+    |> preload([:goal, :tags, :parent, :time_entries])
+    |> Flop.validate_and_run(flop_params, @recommendation_opts)
   end
 
   @doc """
