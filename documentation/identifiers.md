@@ -11,7 +11,7 @@ Every row has two identifiers. Use each where it belongs.
 - Used to look up, join, filter, or associate → `id`.
 - Foreign keys are **always** `id` (`user_id`, `goal_id`, `parent_id`). Never store a `reference_xid` as an FK.
 - Never expose `id` or any FK in a response.
-- A related resource is exposed by its `reference_xid` (e.g. `goal_reference_xid`), never its FK.
+- A related resource is exposed by its `reference_xid` (e.g. `parent_reference_xid`, or embedded as `goal: { reference_xid, name }`), never its FK.
 - Don't send out `reference_xid` as `id` in a response. Be transparent
 - Never accept `id` in a request body. Always accept `reference_xid` and resolve it to `id` internally.
 

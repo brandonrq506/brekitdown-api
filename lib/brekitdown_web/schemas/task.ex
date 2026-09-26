@@ -16,7 +16,16 @@ defmodule BrekitdownWeb.Schemas.Task do
       description: %Schema{type: :string, maxLength: 2000},
       status: TaskStatus,
       due_at: %Schema{type: :string, format: :"date-time", nullable: true},
-      goal_reference_xid: %Schema{type: :string, format: :uuid, nullable: true},
+      goal: %Schema{
+        type: :object,
+        nullable: true,
+        description: "The goal this task belongs to; null when it has none.",
+        properties: %{
+          reference_xid: %Schema{type: :string, format: :uuid},
+          name: %Schema{type: :string, maxLength: 100}
+        },
+        required: [:reference_xid, :name]
+      },
       parent_reference_xid: %Schema{type: :string, format: :uuid, nullable: true},
       has_children: %Schema{type: :boolean},
       notes_count: %Schema{
@@ -45,7 +54,10 @@ defmodule BrekitdownWeb.Schemas.Task do
       description: "Complete the final sections and review the report for accuracy.",
       status: "scheduled",
       due_at: "2024-06-30T12:00:00Z",
-      goal_reference_xid: "123e4567-e89b-12d3-a456-426614174001",
+      goal: %{
+        reference_xid: "123e4567-e89b-12d3-a456-426614174001",
+        name: "Ship the quarterly report"
+      },
       parent_reference_xid: "123e4567-e89b-12d3-a456-426614174002",
       has_children: true,
       notes_count: 1,
