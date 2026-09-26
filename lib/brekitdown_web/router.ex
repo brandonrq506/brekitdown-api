@@ -38,6 +38,7 @@ defmodule BrekitdownWeb.Router do
       pipe_through :authenticated_api
 
       get "/users/me", UserController, :me
+      get "/recommendations", RecommendationController, :index
       delete "/users/log-out", UserSessionController, :delete
       resources "/goals", GoalController, except: [:new, :edit]
 

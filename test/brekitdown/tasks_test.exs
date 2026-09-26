@@ -108,6 +108,63 @@ defmodule Brekitdown.TasksTest do
     end
   end
 
+  describe "list_recommended/2" do
+    test "returns only scheduled and in-progress tasks with a due date, soonest first" do
+      scope = user_scope_fixture()
+      later = task_fixture(scope, %{due_at: due_in(3)})
+      sooner = task_fixture(scope, %{due_at: due_in(1), status: :in_progress})
+      _no_due_date = task_fixture(scope, %{due_at: nil})
+      _completed = task_fixture(scope, %{status: :completed})
+      _dropped = task_fixture(scope, %{status: :dropped})
+      _on_hold = task_fixture(scope, %{status: :on_hold})
+      _other_user = task_fixture(user_scope_fixture())
+
+      assert {:ok, {tasks, %Flop.Meta{}}} = Tasks.list_recommended(scope)
+      assert Enum.map(tasks, & &1.id) == [sooner.id, later.id]
+    end
+
+    test "paginates with a cursor" do
+      scope = user_scope_fixture()
+
+      [task_1, task_2, task_3] =
+        for days <- 1..3, do: task_fixture(scope, %{due_at: due_in(days)})
+
+      assert {:ok, {page_1, meta}} = Tasks.list_recommended(scope, %{"first" => 2})
+      assert Enum.map(page_1, & &1.id) == [task_1.id, task_2.id]
+      assert meta.has_next_page?
+      assert is_binary(meta.end_cursor)
+
+      assert {:ok, {page_2, meta}} =
+               Tasks.list_recommended(scope, %{"first" => 2, "after" => meta.end_cursor})
+
+      assert Enum.map(page_2, & &1.id) == [task_3.id]
+      refute meta.has_next_page?
+    end
+
+    test "ignores client-supplied ordering and filters" do
+      scope = user_scope_fixture()
+      z_sooner = task_fixture(scope, %{name: "Z", due_at: due_in(1)})
+      a_later = task_fixture(scope, %{name: "A", due_at: due_in(2)})
+
+      params = %{
+        "order_by" => ["name"],
+        "filters" => %{
+          "0" => %{"field" => "goal_reference_xid", "op" => "empty", "value" => false}
+        }
+      }
+
+      assert {:ok, {tasks, _meta}} = Tasks.list_recommended(scope, params)
+      assert Enum.map(tasks, & &1.id) == [z_sooner.id, a_later.id]
+    end
+
+    test "rejects a page size above the maximum" do
+      scope = user_scope_fixture()
+
+      assert {:error, %Flop.Meta{errors: [first: [_message]]}} =
+               Tasks.list_recommended(scope, %{"first" => 51})
+    end
+  end
+
   describe "get_task!/2" do
     test "returns the scoped task by reference_xid" do
       scope = user_scope_fixture()
@@ -515,6 +572,10 @@ defmodule Brekitdown.TasksTest do
       assert Repo.aggregate(TaskTag, :count) == 0
       assert Tasks.get_task!(scope, task.reference_xid).id == task.id
     end
+  end
+
+  defp due_in(days) do
+    DateTime.utc_now() |> DateTime.add(days, :day) |> DateTime.truncate(:second)
   end
 
   defp goal_filter(reference_xid) do
