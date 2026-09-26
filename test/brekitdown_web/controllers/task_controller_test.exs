@@ -131,7 +131,7 @@ defmodule BrekitdownWeb.TaskControllerTest do
 
       conn = get(conn, ~p"/api/tasks?#{goal_filter_query(goal.reference_xid)}")
       body = assert_response_schema(conn, 200, "TasksResponse")
-      assert [%{"reference_xid" => ref, "goal_reference_xid" => goal_ref}] = body["data"]
+      assert [%{"reference_xid" => ref, "goal" => %{"reference_xid" => goal_ref}}] = body["data"]
       assert ref == in_goal.reference_xid
       assert goal_ref == goal.reference_xid
     end
@@ -188,7 +188,7 @@ defmodule BrekitdownWeb.TaskControllerTest do
                "reference_xid" => ref,
                "name" => "Write tests",
                "status" => "in_progress",
-               "goal_reference_xid" => nil,
+               "goal" => nil,
                "parent_reference_xid" => nil,
                "has_children" => false,
                "notes_count" => 0
@@ -214,7 +214,7 @@ defmodule BrekitdownWeb.TaskControllerTest do
         post(conn, ~p"/api/tasks", task: %{name: "x", goal_reference_xid: goal.reference_xid})
 
       created = assert_response_schema(conn, 201, "TaskResponse")["data"]
-      assert created["goal_reference_xid"] == goal.reference_xid
+      assert created["goal"] == %{"reference_xid" => goal.reference_xid, "name" => goal.name}
     end
 
     test "renders an error when the name is missing", %{conn: conn} do

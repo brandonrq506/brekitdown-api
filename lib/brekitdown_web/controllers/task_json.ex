@@ -21,7 +21,7 @@ defmodule BrekitdownWeb.TaskJSON do
       description: task.description,
       status: task.status,
       due_at: task.due_at,
-      goal_reference_xid: goal_reference_xid(task.goal),
+      goal: goal(task.goal),
       parent_reference_xid: parent_reference_xid(task.parent),
       has_children: task.has_children,
       notes_count: task.notes_count,
@@ -32,8 +32,8 @@ defmodule BrekitdownWeb.TaskJSON do
     }
   end
 
-  defp goal_reference_xid(%Goal{reference_xid: ref}), do: ref
-  defp goal_reference_xid(_), do: nil
+  defp goal(%Goal{reference_xid: ref, name: name}), do: %{reference_xid: ref, name: name}
+  defp goal(_), do: nil
 
   defp parent_reference_xid(%Task{reference_xid: ref}), do: ref
   defp parent_reference_xid(_), do: nil

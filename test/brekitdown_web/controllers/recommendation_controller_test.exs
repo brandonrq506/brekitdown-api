@@ -42,8 +42,8 @@ defmodule BrekitdownWeb.RecommendationControllerTest do
       assert Enum.map(body["data"], & &1["reference_xid"]) ==
                [sooner.reference_xid, later.reference_xid]
 
-      assert [%{"goal_reference_xid" => goal_ref} | _] = body["data"]
-      assert goal_ref == goal.reference_xid
+      assert [%{"goal" => rendered_goal} | _] = body["data"]
+      assert rendered_goal == %{"reference_xid" => goal.reference_xid, "name" => goal.name}
     end
 
     test "breaks due_at ties deterministically across requests", %{conn: conn, scope: scope} do
