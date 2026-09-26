@@ -35,8 +35,8 @@ defmodule BrekitdownWeb.GoalController do
         schema: %Schema{
           type: :integer,
           enum: Goal.page_sizes(),
-          default: Flop.Schema.default_limit(%Goal{}),
-          maximum: Flop.Schema.max_limit(%Goal{})
+          default: Flop.get_option(:default_limit, for: Goal),
+          maximum: Flop.get_option(:max_limit, for: Goal)
         }
       ]
     ],

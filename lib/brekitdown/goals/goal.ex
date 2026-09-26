@@ -1,12 +1,12 @@
 defmodule Brekitdown.Goals.Goal do
   use Ecto.Schema
+  use Flop.Schema
   import Ecto.Changeset
   import Ecto.Query
 
   @page_sizes [10, 20, 30, 40, 50]
 
-  @derive {
-    Flop.Schema,
+  @flop_options [
     filterable: [],
     sortable: [:starred, :name],
     adapter_opts: [
@@ -25,7 +25,7 @@ defmodule Brekitdown.Goals.Goal do
       order_by: [:starred, :name],
       order_directions: [:desc, :asc]
     }
-  }
+  ]
 
   @derive {Phoenix.Param, key: :reference_xid}
 

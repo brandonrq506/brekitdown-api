@@ -1,13 +1,13 @@
 defmodule Brekitdown.Tasks.Task do
   use Ecto.Schema
+  use Flop.Schema
 
   import Brekitdown.Tasks.TaskStatuses, only: [is_task_status: 1]
   import Ecto.Changeset
 
   alias Brekitdown.Tasks.TaskStatuses
 
-  @derive {
-    Flop.Schema,
+  @flop_options [
     filterable: [:goal_reference_xid],
     sortable: [],
     default_limit: false,
@@ -16,7 +16,7 @@ defmodule Brekitdown.Tasks.Task do
         goal_reference_xid: [binding: :goal, field: :reference_xid, ecto_type: Ecto.UUID]
       ]
     ]
-  }
+  ]
 
   @derive {Phoenix.Param, key: :reference_xid}
 

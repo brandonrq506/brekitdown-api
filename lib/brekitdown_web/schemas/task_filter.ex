@@ -14,7 +14,7 @@ defmodule BrekitdownWeb.Schemas.TaskFilter do
       properties: %{
         field: %Schema{
           type: :string,
-          enum: Enum.map(Flop.Schema.filterable(%Task{}), &Atom.to_string/1),
+          enum: Enum.map(Flop.allowed_fields(:filterable, for: Task), &Atom.to_string/1),
           description: "`goal_reference_xid`: The reference_xid of the task's goal."
         },
         op: %Schema{
