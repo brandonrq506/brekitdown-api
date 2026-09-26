@@ -78,7 +78,7 @@ defmodule Brekitdown.Tasks do
 
   @doc """
   Tasks the user should work on next: scheduled or in progress, with a due date, soonest first.
-  Cursor-paginated. The rules are server-owned on purpose; see documentation/task/recommendations.md.
+  Cursor-paginated. The rules are server-owned on purpose.
 
   Returns `{:ok, {tasks, %Flop.Meta{}}}` or `{:error, %Flop.Meta{}}`.
   """
