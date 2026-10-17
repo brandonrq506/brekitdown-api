@@ -8,6 +8,7 @@ defmodule Brekitdown.Goals do
 
   alias Brekitdown.Accounts.Scope
   alias Brekitdown.Goals.Goal
+  alias Brekitdown.Tasks
 
   @doc """
   Subscribes to scoped notifications about any goal changes.
@@ -128,9 +129,12 @@ defmodule Brekitdown.Goals do
   end
 
   @doc """
-  Marks a goal as completed.
+  Marks a goal as completed and drops its Open tasks, subtasks included.
 
-  Idempotent: completing an already-completed goal returns it unchanged.
+  Both writes happen in one transaction: either the goal is completed and its Open tasks
+  are dropped, or nothing changes. Closed tasks are left untouched.
+
+  Idempotent: completing an already-completed goal returns it unchanged and touches no tasks.
 
   ## Examples
 
@@ -141,10 +145,7 @@ defmodule Brekitdown.Goals do
   def complete_goal(%Scope{} = scope, %Goal{completed_at: nil} = goal) do
     true = goal.user_id == scope.user.id
 
-    with {:ok, goal = %Goal{}} <-
-           goal
-           |> Ecto.Changeset.change(completed_at: DateTime.utc_now(:second))
-           |> Repo.update() do
+    with {:ok, goal = %Goal{}} <- Repo.transact(fn -> mark_completed(scope, goal) end) do
       broadcast_goal(scope, {:updated, goal})
       {:ok, goal}
     end
@@ -191,5 +192,15 @@ defmodule Brekitdown.Goals do
     true = goal.user_id == scope.user.id
 
     Goal.changeset(goal, attrs, scope)
+  end
+
+  defp mark_completed(scope, goal) do
+    with {:ok, goal = %Goal{}} <-
+           goal
+           |> Ecto.Changeset.change(completed_at: DateTime.utc_now(:second))
+           |> Repo.update() do
+      Tasks.drop_open_tasks(scope, goal)
+      {:ok, goal}
+    end
   end
 end

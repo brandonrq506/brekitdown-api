@@ -2,6 +2,7 @@ defmodule BrekitdownWeb.GoalControllerTest do
   use BrekitdownWeb.ConnCase, async: true
 
   import Brekitdown.GoalsFixtures
+  import Brekitdown.TasksFixtures, only: [task_fixture: 2]
   import Brekitdown.AccountsFixtures, only: [user_scope_fixture: 0]
 
   alias Brekitdown.Goals.Goal
@@ -203,6 +204,35 @@ defmodule BrekitdownWeb.GoalControllerTest do
 
       assert second_body["data"]["completed_at"] == first_body["data"]["completed_at"]
       assert second_body == first_body
+    end
+
+    test "drops open tasks, subtasks included, and leaves closed tasks untouched", %{
+      conn: conn,
+      scope: scope,
+      goal: goal
+    } do
+      in_goal = %{goal_reference_xid: goal.reference_xid}
+      scheduled = task_fixture(scope, in_goal)
+      in_progress = task_fixture(scope, Map.put(in_goal, :status, :in_progress))
+      on_hold = task_fixture(scope, Map.put(in_goal, :status, :on_hold))
+      subtask = task_fixture(scope, %{parent_reference_xid: scheduled.reference_xid})
+      completed = task_fixture(scope, Map.put(in_goal, :status, :completed))
+      dropped = task_fixture(scope, Map.put(in_goal, :status, :dropped))
+
+      conn = post(conn, ~p"/api/goals/#{goal}/complete")
+      assert assert_response_schema(conn, 200, "GoalResponse")["data"]["completed_at"]
+
+      statuses =
+        for task <- [scheduled, in_progress, on_hold, subtask, completed, dropped] do
+          conn
+          |> recycle()
+          |> put_req_header("accept", "application/json")
+          |> get(~p"/api/tasks/#{task}")
+          |> json_response(200)
+          |> get_in(["data", "status"])
+        end
+
+      assert statuses == ~w(dropped dropped dropped dropped completed dropped)
     end
 
     test "completes a goal with zero tasks", %{conn: conn, goal: goal} do

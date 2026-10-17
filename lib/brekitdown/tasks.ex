@@ -8,6 +8,7 @@ defmodule Brekitdown.Tasks do
 
   alias Brekitdown.Accounts.Scope
   alias Brekitdown.Goals
+  alias Brekitdown.Goals.Goal
   alias Brekitdown.Tags
   alias Brekitdown.Tags.TaskTag
   alias Brekitdown.TaskNotes.TaskNote
@@ -296,6 +297,26 @@ defmodule Brekitdown.Tasks do
     task
     |> Task.status_changeset(status)
     |> Repo.update()
+  end
+
+  @doc """
+  Drops every Open task of a goal, subtasks included. Closed tasks are left untouched.
+
+  Subtasks carry their parent's `goal_id`, so filtering by goal reaches every level.
+
+  ## Examples
+
+      iex> drop_open_tasks(scope, goal)
+      {3, nil}
+
+  """
+  def drop_open_tasks(%Scope{} = scope, %Goal{} = goal) do
+    true = goal.user_id == scope.user.id
+
+    Task
+    |> where(user_id: ^scope.user.id, goal_id: ^goal.id)
+    |> where([t], t.status in ^TaskStatuses.open())
+    |> Repo.update_all(set: [status: :dropped, updated_at: DateTime.utc_now(:second)])
   end
 
   defp maybe_put_goal(changeset, _scope, nil), do: changeset

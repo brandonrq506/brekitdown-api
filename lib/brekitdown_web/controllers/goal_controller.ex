@@ -120,7 +120,7 @@ defmodule BrekitdownWeb.GoalController do
   end
 
   operation(:complete,
-    summary: "Mark a goal as completed (idempotent)",
+    summary: "Mark a goal as completed and drop its open tasks (idempotent)",
     security: [%{"bearer" => []}],
     parameters: [
       id: [in: :path, type: :string, required: true, description: "Goal reference_xid"]
