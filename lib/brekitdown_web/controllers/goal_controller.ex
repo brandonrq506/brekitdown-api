@@ -140,6 +140,27 @@ defmodule BrekitdownWeb.GoalController do
     end
   end
 
+  operation(:reopen,
+    summary: "Reopen a completed goal; dropped tasks stay dropped (idempotent)",
+    security: [%{"bearer" => []}],
+    parameters: [
+      id: [in: :path, type: :string, required: true, description: "Goal reference_xid"]
+    ],
+    responses: [
+      ok: {"Goal reopened", "application/json", GoalResponse},
+      not_found: {"Not found", "application/json", Error},
+      unauthorized: {"Unauthorized", "application/json", Error}
+    ]
+  )
+
+  def reopen(conn, %{id: id}) do
+    goal = Goals.get_goal!(conn.assigns.current_scope, id)
+
+    with {:ok, %Goal{} = goal} <- Goals.reopen_goal(conn.assigns.current_scope, goal) do
+      render(conn, :show, goal: goal)
+    end
+  end
+
   operation(:delete,
     summary: "Delete a goal",
     security: [%{"bearer" => []}],

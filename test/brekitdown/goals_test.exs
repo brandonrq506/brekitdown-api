@@ -251,6 +251,38 @@ defmodule Brekitdown.GoalsTest do
       assert_raise MatchError, fn -> Goals.complete_goal(other_scope, goal) end
     end
 
+    test "reopen_goal/2 clears completed_at" do
+      scope = user_scope_fixture()
+      {:ok, completed} = Goals.complete_goal(scope, goal_fixture(scope))
+
+      assert {:ok, %Goal{completed_at: nil}} = Goals.reopen_goal(scope, completed)
+      assert Goals.get_goal!(scope, completed.reference_xid).completed_at == nil
+    end
+
+    test "reopen_goal/2 on a goal that is not completed returns it unchanged" do
+      scope = user_scope_fixture()
+      goal = goal_fixture(scope)
+
+      assert {:ok, ^goal} = Goals.reopen_goal(scope, goal)
+    end
+
+    test "reopen_goal/2 leaves dropped tasks dropped" do
+      scope = user_scope_fixture()
+      goal = goal_fixture(scope)
+      task = task_fixture(scope, %{goal_reference_xid: goal.reference_xid})
+      {:ok, completed} = Goals.complete_goal(scope, goal)
+
+      assert {:ok, _goal} = Goals.reopen_goal(scope, completed)
+      assert Tasks.get_task!(scope, task.reference_xid).status == :dropped
+    end
+
+    test "reopen_goal/2 with invalid scope raises" do
+      scope = user_scope_fixture()
+      other_scope = user_scope_fixture()
+      {:ok, completed} = Goals.complete_goal(scope, goal_fixture(scope))
+      assert_raise MatchError, fn -> Goals.reopen_goal(other_scope, completed) end
+    end
+
     test "update_goal/3 ignores completed_at" do
       scope = user_scope_fixture()
       goal = goal_fixture(scope)

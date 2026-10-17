@@ -158,6 +158,37 @@ defmodule Brekitdown.Goals do
   end
 
   @doc """
+  Reopens a completed goal by clearing `completed_at`.
+
+  Tasks dropped by completion stay dropped.
+
+  Idempotent: reopening a goal that is not completed returns it unchanged.
+
+  ## Examples
+
+      iex> reopen_goal(scope, goal)
+      {:ok, %Goal{completed_at: nil}}
+
+  """
+  def reopen_goal(%Scope{} = scope, %Goal{completed_at: nil} = goal) do
+    true = goal.user_id == scope.user.id
+
+    {:ok, goal}
+  end
+
+  def reopen_goal(%Scope{} = scope, %Goal{} = goal) do
+    true = goal.user_id == scope.user.id
+
+    with {:ok, goal = %Goal{}} <-
+           goal
+           |> Ecto.Changeset.change(completed_at: nil)
+           |> Repo.update() do
+      broadcast_goal(scope, {:updated, goal})
+      {:ok, goal}
+    end
+  end
+
+  @doc """
   Deletes a goal.
 
   ## Examples

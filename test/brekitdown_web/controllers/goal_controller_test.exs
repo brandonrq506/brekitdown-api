@@ -269,6 +269,64 @@ defmodule BrekitdownWeb.GoalControllerTest do
     end
   end
 
+  describe "reopen goal" do
+    setup [:create_goal]
+
+    test "clears completed_at and returns the goal", %{conn: conn, goal: goal} do
+      post(conn, ~p"/api/goals/#{goal}/complete")
+
+      conn = post(conn, ~p"/api/goals/#{goal}/reopen")
+      data = assert_response_schema(conn, 200, "GoalResponse")["data"]
+
+      assert data["reference_xid"] == goal.reference_xid
+      assert data["completed_at"] == nil
+    end
+
+    test "is idempotent: reopening a goal that is not completed returns it unchanged", %{
+      conn: conn,
+      goal: goal
+    } do
+      first = post(conn, ~p"/api/goals/#{goal}/reopen")
+      first_body = assert_response_schema(first, 200, "GoalResponse")
+
+      second = post(conn, ~p"/api/goals/#{goal}/reopen")
+      second_body = assert_response_schema(second, 200, "GoalResponse")
+
+      assert first_body["data"]["completed_at"] == nil
+      assert second_body == first_body
+    end
+
+    test "does not change task statuses", %{conn: conn, scope: scope, goal: goal} do
+      in_goal = %{goal_reference_xid: goal.reference_xid}
+      scheduled = task_fixture(scope, in_goal)
+      completed = task_fixture(scope, Map.put(in_goal, :status, :completed))
+
+      post(conn, ~p"/api/goals/#{goal}/complete")
+      conn = post(conn, ~p"/api/goals/#{goal}/reopen")
+      assert assert_response_schema(conn, 200, "GoalResponse")["data"]["completed_at"] == nil
+
+      statuses =
+        for task <- [scheduled, completed] do
+          conn
+          |> recycle()
+          |> put_req_header("accept", "application/json")
+          |> get(~p"/api/tasks/#{task}")
+          |> json_response(200)
+          |> get_in(["data", "status"])
+        end
+
+      assert statuses == ~w(dropped completed)
+    end
+
+    test "404s for another user's goal", %{conn: conn} do
+      other_goal = goal_fixture(user_scope_fixture())
+
+      assert_error_sent 404, fn ->
+        post(conn, ~p"/api/goals/#{other_goal}/reopen")
+      end
+    end
+  end
+
   describe "delete goal" do
     setup [:create_goal]
 
