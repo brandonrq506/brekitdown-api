@@ -7,13 +7,18 @@ defmodule Brekitdown.Goals.Goal do
   @page_sizes [10, 20, 30, 40, 50]
 
   @flop_options [
-    filterable: [],
+    filterable: [:completed],
     sortable: [:starred, :name],
     adapter_opts: [
       custom_fields: [
         starred: [
           field_dynamic: {__MODULE__, :starred_dynamic, []},
           ecto_type: :boolean
+        ],
+        completed: [
+          field_dynamic: {__MODULE__, :completed_dynamic, []},
+          ecto_type: :boolean,
+          operators: [:==]
         ]
       ]
     ],
@@ -55,4 +60,6 @@ defmodule Brekitdown.Goals.Goal do
   def page_sizes, do: @page_sizes
 
   def starred_dynamic(_opts), do: dynamic([goal], not is_nil(goal.starred_at))
+
+  def completed_dynamic(_opts), do: dynamic([goal], not is_nil(goal.completed_at))
 end

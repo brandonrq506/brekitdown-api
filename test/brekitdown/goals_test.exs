@@ -48,6 +48,18 @@ defmodule Brekitdown.GoalsTest do
       assert goals == [starred_birch, starred_yarrow, unstarred_apple, unstarred_zebra]
     end
 
+    test "paginated_list/2 filters by completed and returns everything without a filter" do
+      scope = user_scope_fixture()
+      open = goal_fixture(scope, %{name: "Open"})
+      {:ok, completed} = Goals.complete_goal(scope, goal_fixture(scope, %{name: "Done"}))
+
+      filter = fn value -> %{filters: [%{field: :completed, op: :==, value: value}]} end
+
+      assert {:ok, {[^open], _meta}} = Goals.paginated_list(scope, filter.(false))
+      assert {:ok, {[^completed], _meta}} = Goals.paginated_list(scope, filter.(true))
+      assert {:ok, {[^completed, ^open], _meta}} = Goals.paginated_list(scope)
+    end
+
     test "page size menu is consistent with Flop limits" do
       assert Enum.max(Goal.page_sizes()) == Flop.get_option(:max_limit, for: Goal)
       assert Flop.get_option(:default_limit, for: Goal) in Goal.page_sizes()
