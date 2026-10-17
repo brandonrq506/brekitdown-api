@@ -5,6 +5,7 @@ defmodule BrekitdownWeb.GoalControllerTest do
   import Brekitdown.TasksFixtures, only: [task_fixture: 2]
   import Brekitdown.AccountsFixtures, only: [user_scope_fixture: 0]
 
+  alias Brekitdown.Goals
   alias Brekitdown.Goals.Goal
 
   @create_attrs %{name: "some name", description: "some description"}
@@ -55,6 +56,52 @@ defmodule BrekitdownWeb.GoalControllerTest do
 
       assert Enum.map(assert_response_schema(conn, 200, "GoalsResponse")["data"], & &1["name"]) ==
                ["Birch", "Yarrow", "Apple", "Zebra"]
+    end
+
+    test "completed=false excludes Completed goals, keeping the usual order", %{
+      conn: conn,
+      scope: scope
+    } do
+      seed_completed_and_open_goals(scope)
+
+      assert goal_names(get(conn, ~p"/api/goals?#{completed_filter(false)}")) ==
+               ["Yarrow", "Birch", "Zebra"]
+    end
+
+    test "completed=true returns only Completed goals, keeping the usual order", %{
+      conn: conn,
+      scope: scope
+    } do
+      seed_completed_and_open_goals(scope)
+
+      assert goal_names(get(conn, ~p"/api/goals?#{completed_filter(true)}")) ==
+               ["Xenon", "Apple"]
+    end
+
+    test "no filter returns every goal, completed ones in their usual position", %{
+      conn: conn,
+      scope: scope
+    } do
+      seed_completed_and_open_goals(scope)
+
+      assert goal_names(get(conn, ~p"/api/goals")) ==
+               ["Xenon", "Yarrow", "Apple", "Birch", "Zebra"]
+    end
+
+    test "rejects an unsupported filter field", %{conn: conn} do
+      query = %{filters: %{"0" => %{field: "name", op: "==", value: true}}}
+      conn = get(conn, ~p"/api/goals?#{query}")
+
+      assert %{"errors" => %{"field" => [_]}} =
+               assert_response_schema(conn, 422, "ChangesetError")
+    end
+
+    test "rejects a non-boolean completed value", %{conn: conn} do
+      query = %{filters: %{"0" => %{field: "completed", op: "==", value: "maybe"}}}
+      conn = get(conn, ~p"/api/goals?#{query}")
+
+      assert %{"errors" => %{"value" => [_]}} =
+               assert_response_schema(conn, 422, "ChangesetError")
     end
 
     test "rejects a page size outside the configured choices", %{conn: conn} do
@@ -347,6 +394,25 @@ defmodule BrekitdownWeb.GoalControllerTest do
       end
     end
   end
+
+  # Starred first, then by name: Xenon and Yarrow are starred; Apple and Xenon are completed.
+  defp seed_completed_and_open_goals(scope) do
+    starred_at = DateTime.utc_now(:second)
+
+    {:ok, _} =
+      Goals.complete_goal(scope, goal_fixture(scope, %{name: "Xenon", starred_at: starred_at}))
+
+    goal_fixture(scope, %{name: "Yarrow", starred_at: starred_at})
+    {:ok, _} = Goals.complete_goal(scope, goal_fixture(scope, %{name: "Apple"}))
+    goal_fixture(scope, %{name: "Birch"})
+    goal_fixture(scope, %{name: "Zebra"})
+  end
+
+  defp completed_filter(value),
+    do: %{filters: %{"0" => %{field: "completed", op: "==", value: value}}}
+
+  defp goal_names(conn),
+    do: Enum.map(assert_response_schema(conn, 200, "GoalsResponse")["data"], & &1["name"])
 
   defp create_goal(%{scope: scope}) do
     %{goal: goal_fixture(scope)}

@@ -10,6 +10,7 @@ defmodule BrekitdownWeb.GoalController do
     ChangesetError,
     Error,
     GoalCreateRequest,
+    GoalFilters,
     GoalResponse,
     GoalsResponse,
     GoalUpdateRequest
@@ -22,8 +23,17 @@ defmodule BrekitdownWeb.GoalController do
 
   operation(:index,
     summary: "List the current user's goals",
+    description:
+      "Optionally accepts filters. Supported: completed. No filter returns every goal; " <>
+        "ordering is always starred first, then name.",
     security: [%{"bearer" => []}],
     parameters: [
+      filters: [
+        in: :query,
+        style: :deepObject,
+        explode: true,
+        schema: GoalFilters
+      ],
       page: [
         in: :query,
         description: "Page number",

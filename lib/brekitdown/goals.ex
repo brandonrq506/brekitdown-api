@@ -35,17 +35,23 @@ defmodule Brekitdown.Goals do
   @doc """
   Returns a paginated list of goals for the current scope.
 
+  Accepts a `completed` boolean filter. No filter is applied by default, so Completed goals
+  are included unless the caller asks otherwise.
+
   ## Examples
 
       iex> paginated_list(scope, %{page: 1, page_size: 20})
       {:ok, {[%Goal{}, ...], %Flop.Meta{}}}
+
+      iex> paginated_list(scope, %{filters: [%{field: :completed, op: :==, value: false}]})
+      {:ok, {[%Goal{completed_at: nil}, ...], %Flop.Meta{}}}
 
   """
   def paginated_list(%Scope{} = scope, flop_params \\ %{}, preloads \\ []) do
     Goal
     |> where(user_id: ^scope.user.id)
     |> preload(^preloads)
-    |> Flop.validate_and_run(flop_params, for: Goal, filtering: false, ordering: false)
+    |> Flop.validate_and_run(flop_params, for: Goal, ordering: false)
   end
 
   @doc """
