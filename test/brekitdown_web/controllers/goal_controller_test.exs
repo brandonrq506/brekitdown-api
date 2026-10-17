@@ -180,6 +180,65 @@ defmodule BrekitdownWeb.GoalControllerTest do
     end
   end
 
+  describe "complete goal" do
+    setup [:create_goal]
+
+    test "sets completed_at and returns the goal", %{conn: conn, goal: goal} do
+      assert goal.completed_at == nil
+
+      conn = post(conn, ~p"/api/goals/#{goal}/complete")
+      data = assert_response_schema(conn, 200, "GoalResponse")["data"]
+
+      assert data["reference_xid"] == goal.reference_xid
+      assert is_binary(data["completed_at"])
+      assert data["archived_at"] == nil
+    end
+
+    test "is idempotent: the original completed_at is kept", %{conn: conn, goal: goal} do
+      first = post(conn, ~p"/api/goals/#{goal}/complete")
+      first_body = assert_response_schema(first, 200, "GoalResponse")
+
+      second = post(conn, ~p"/api/goals/#{goal}/complete")
+      second_body = assert_response_schema(second, 200, "GoalResponse")
+
+      assert second_body["data"]["completed_at"] == first_body["data"]["completed_at"]
+      assert second_body == first_body
+    end
+
+    test "completes a goal with zero tasks", %{conn: conn, goal: goal} do
+      conn = post(conn, ~p"/api/goals/#{goal}/complete")
+      assert assert_response_schema(conn, 200, "GoalResponse")["data"]["completed_at"]
+    end
+
+    test "completed_at sent through update is rejected and nothing changes", %{
+      conn: conn,
+      goal: goal
+    } do
+      conn =
+        put(conn, ~p"/api/goals/#{goal}",
+          goal: %{name: "renamed", completed_at: "2026-01-01T00:00:00Z"}
+        )
+
+      assert json_response(conn, 422)
+
+      assert %{"name" => "some name", "completed_at" => nil} =
+               conn
+               |> recycle()
+               |> put_req_header("accept", "application/json")
+               |> get(~p"/api/goals/#{goal}")
+               |> json_response(200)
+               |> Map.fetch!("data")
+    end
+
+    test "404s for another user's goal", %{conn: conn} do
+      other_goal = goal_fixture(user_scope_fixture())
+
+      assert_error_sent 404, fn ->
+        post(conn, ~p"/api/goals/#{other_goal}/complete")
+      end
+    end
+  end
+
   describe "delete goal" do
     setup [:create_goal]
 

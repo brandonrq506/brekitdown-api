@@ -33,6 +33,7 @@ defmodule Brekitdown.Goals.Goal do
     field :name, :string
     field :description, :string
     field :archived_at, :utc_datetime
+    field :completed_at, :utc_datetime
     field :starred_at, :utc_datetime
     field :reference_xid, Ecto.UUID, read_after_writes: true
     field :user_id, :id

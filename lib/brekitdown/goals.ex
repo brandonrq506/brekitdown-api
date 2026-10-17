@@ -128,6 +128,35 @@ defmodule Brekitdown.Goals do
   end
 
   @doc """
+  Marks a goal as completed.
+
+  Idempotent: completing an already-completed goal returns it unchanged.
+
+  ## Examples
+
+      iex> complete_goal(scope, goal)
+      {:ok, %Goal{completed_at: ~U[2026-10-16 12:00:00Z]}}
+
+  """
+  def complete_goal(%Scope{} = scope, %Goal{completed_at: nil} = goal) do
+    true = goal.user_id == scope.user.id
+
+    with {:ok, goal = %Goal{}} <-
+           goal
+           |> Ecto.Changeset.change(completed_at: DateTime.utc_now(:second))
+           |> Repo.update() do
+      broadcast_goal(scope, {:updated, goal})
+      {:ok, goal}
+    end
+  end
+
+  def complete_goal(%Scope{} = scope, %Goal{} = goal) do
+    true = goal.user_id == scope.user.id
+
+    {:ok, goal}
+  end
+
+  @doc """
   Deletes a goal.
 
   ## Examples

@@ -25,6 +25,7 @@ defmodule BrekitdownWeb.GoalJSON do
       description: goal.description,
       name: goal.name,
       archived_at: goal.archived_at,
+      completed_at: goal.completed_at,
       starred_at: goal.starred_at,
       inserted_at: goal.inserted_at,
       updated_at: goal.updated_at
