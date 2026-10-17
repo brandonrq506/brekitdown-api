@@ -10,6 +10,7 @@ defmodule BrekitdownWeb.Schemas.GoalUpdateRequest do
       goal: %Schema{
         type: :object,
         minProperties: 1,
+        additionalProperties: false,
         properties: %{
           name: %Schema{type: :string, maxLength: 100},
           description: %Schema{type: :string, nullable: true},

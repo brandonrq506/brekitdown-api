@@ -156,6 +156,35 @@ defmodule Brekitdown.GoalsTest do
       assert_raise MatchError, fn -> Goals.delete_goal(other_scope, goal) end
     end
 
+    test "complete_goal/2 sets completed_at" do
+      scope = user_scope_fixture()
+      goal = goal_fixture(scope)
+      assert {:ok, %Goal{completed_at: %DateTime{}}} = Goals.complete_goal(scope, goal)
+    end
+
+    test "complete_goal/2 keeps the original completed_at when already completed" do
+      scope = user_scope_fixture()
+      {:ok, completed} = Goals.complete_goal(scope, goal_fixture(scope))
+
+      assert {:ok, again} = Goals.complete_goal(scope, completed)
+      assert again.completed_at == completed.completed_at
+    end
+
+    test "complete_goal/2 with invalid scope raises" do
+      scope = user_scope_fixture()
+      other_scope = user_scope_fixture()
+      goal = goal_fixture(scope)
+      assert_raise MatchError, fn -> Goals.complete_goal(other_scope, goal) end
+    end
+
+    test "update_goal/3 ignores completed_at" do
+      scope = user_scope_fixture()
+      goal = goal_fixture(scope)
+
+      assert {:ok, %Goal{completed_at: nil}} =
+               Goals.update_goal(scope, goal, %{completed_at: ~U[2026-01-01 00:00:00Z]})
+    end
+
     test "change_goal/2 returns a goal changeset" do
       scope = user_scope_fixture()
       goal = goal_fixture(scope)

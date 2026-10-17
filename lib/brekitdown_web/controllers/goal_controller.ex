@@ -119,6 +119,27 @@ defmodule BrekitdownWeb.GoalController do
     end
   end
 
+  operation(:complete,
+    summary: "Mark a goal as completed (idempotent)",
+    security: [%{"bearer" => []}],
+    parameters: [
+      id: [in: :path, type: :string, required: true, description: "Goal reference_xid"]
+    ],
+    responses: [
+      ok: {"Goal completed", "application/json", GoalResponse},
+      not_found: {"Not found", "application/json", Error},
+      unauthorized: {"Unauthorized", "application/json", Error}
+    ]
+  )
+
+  def complete(conn, %{id: id}) do
+    goal = Goals.get_goal!(conn.assigns.current_scope, id)
+
+    with {:ok, %Goal{} = goal} <- Goals.complete_goal(conn.assigns.current_scope, goal) do
+      render(conn, :show, goal: goal)
+    end
+  end
+
   operation(:delete,
     summary: "Delete a goal",
     security: [%{"bearer" => []}],

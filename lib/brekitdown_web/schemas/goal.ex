@@ -12,6 +12,7 @@ defmodule BrekitdownWeb.Schemas.Goal do
       name: %Schema{type: :string, maxLength: 100},
       description: %Schema{type: :string, nullable: true},
       archived_at: %Schema{type: :string, format: :"date-time", nullable: true},
+      completed_at: %Schema{type: :string, format: :"date-time", nullable: true},
       starred_at: %Schema{type: :string, format: :"date-time", nullable: true},
       inserted_at: %Schema{type: :string, format: :"date-time"},
       updated_at: %Schema{type: :string, format: :"date-time"}
@@ -20,6 +21,7 @@ defmodule BrekitdownWeb.Schemas.Goal do
       :reference_xid,
       :name,
       :archived_at,
+      :completed_at,
       :starred_at,
       :inserted_at,
       :updated_at
@@ -29,6 +31,7 @@ defmodule BrekitdownWeb.Schemas.Goal do
       name: "Learn to use Claude",
       description: "Become more valuable and efficient at work",
       archived_at: nil,
+      completed_at: nil,
       starred_at: "2024-01-02T12:00:00Z",
       inserted_at: "2024-01-01T12:00:00Z",
       updated_at: "2024-01-01T12:00:00Z"

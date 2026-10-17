@@ -41,6 +41,7 @@ defmodule BrekitdownWeb.Router do
       get "/recommendations", RecommendationController, :index
       delete "/users/log-out", UserSessionController, :delete
       resources "/goals", GoalController, except: [:new, :edit]
+      post "/goals/:id/complete", GoalController, :complete
 
       resources "/tasks", TaskController, except: [:new, :edit] do
         resources "/notes", TaskNoteController, only: [:index, :create, :update, :delete]
