@@ -45,7 +45,7 @@ defmodule BrekitdownWeb.FallbackController do
       render_conflict(
         conn,
         "goal_completed",
-        "This task's goal is completed, so its tasks cannot be open. Reopen the goal first."
+        "This goal is completed, so its tasks cannot be added or made open. Reopen the goal first."
       )
 
   # Safety net: anything unmatched is logged and returned as a controlled 500.

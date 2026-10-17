@@ -143,6 +143,9 @@ defmodule Brekitdown.Tasks do
   @doc """
   Creates a task.
 
+  Refused with `{:error, :goal_completed}` when the task (or its parent) belongs to a
+  Completed goal (ADR-0001), whatever status it is created with.
+
   ## Examples
 
       iex> create_task(scope, %{field: value})
@@ -151,13 +154,18 @@ defmodule Brekitdown.Tasks do
       iex> create_task(scope, %{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
+      iex> create_task(scope, %{name: "x", goal_reference_xid: completed_goal_xid})
+      {:error, :goal_completed}
+
   """
   def create_task(%Scope{} = scope, attrs) do
-    with {:ok, task = %Task{}} <-
-           %Task{}
-           |> Task.create_changeset(attrs, scope)
-           |> put_parent_and_goal(scope, attrs[:parent_reference_xid], attrs[:goal_reference_xid])
-           |> Repo.insert() do
+    changeset =
+      %Task{}
+      |> Task.create_changeset(attrs, scope)
+      |> put_parent_and_goal(scope, attrs[:parent_reference_xid], attrs[:goal_reference_xid])
+
+    with :ok <- ensure_goal_open(changeset),
+         {:ok, task = %Task{}} <- Repo.insert(changeset) do
       {:ok, task}
     end
   end
@@ -342,6 +350,15 @@ defmodule Brekitdown.Tasks do
     goal_id = Ecto.Changeset.get_field(changeset, :goal_id)
 
     if is_open_status(status) and goal_completed?(goal_id) do
+      {:error, :goal_completed}
+    else
+      :ok
+    end
+  end
+
+  # A Completed goal takes no new tasks at all, not even closed ones.
+  defp ensure_goal_open(changeset) do
+    if changeset |> Ecto.Changeset.get_field(:goal_id) |> goal_completed?() do
       {:error, :goal_completed}
     else
       :ok

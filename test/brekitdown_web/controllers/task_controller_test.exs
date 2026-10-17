@@ -366,9 +366,27 @@ defmodule BrekitdownWeb.TaskControllerTest do
     setup %{scope: scope} do
       goal = goal_fixture(scope)
       task = task_fixture(scope, %{goal_reference_xid: goal.reference_xid})
-      {:ok, _goal} = Brekitdown.Goals.complete_goal(scope, goal)
+      {:ok, goal} = Brekitdown.Goals.complete_goal(scope, goal)
 
-      %{task: task}
+      %{goal: goal, task: task}
+    end
+
+    test "409 when creating a task in the goal", %{conn: conn, goal: goal} do
+      conn =
+        post(conn, ~p"/api/tasks", task: %{name: "New", goal_reference_xid: goal.reference_xid})
+
+      body = assert_response_schema(conn, 409, "ConflictError")
+
+      assert body["errors"]["code"] == "goal_completed"
+    end
+
+    test "409 when creating a subtask under one of the goal's tasks", %{conn: conn, task: task} do
+      conn =
+        post(conn, ~p"/api/tasks", task: %{name: "Sub", parent_reference_xid: task.reference_xid})
+
+      body = assert_response_schema(conn, 409, "ConflictError")
+
+      assert body["errors"]["code"] == "goal_completed"
     end
 
     test "409 when moving the task to an open status", %{conn: conn, task: task} do

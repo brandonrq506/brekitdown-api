@@ -153,6 +153,19 @@ defmodule BrekitdownWeb.TimeEntryControllerTest do
       assert Brekitdown.TimeEntries.list_time_entries_by_task(scope, task) == []
     end
 
+    test "201 for a finished entry on a task of a completed goal", %{conn: conn, scope: scope} do
+      goal = goal_fixture(scope)
+      task = task_fixture(scope, %{goal_reference_xid: goal.reference_xid})
+      {:ok, _goal} = Brekitdown.Goals.complete_goal(scope, goal)
+
+      conn =
+        post(conn, ~p"/api/tasks/#{task}/time_entries",
+          time_entry: %{started_at: hours_ago(2), ended_at: hours_ago(1)}
+        )
+
+      assert_response_schema(conn, 201, "TimeEntryResponse")
+    end
+
     test "422 when started_at is missing", %{conn: conn, task: task} do
       conn = post(conn, ~p"/api/tasks/#{task}/time_entries", time_entry: %{})
 

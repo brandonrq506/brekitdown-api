@@ -78,7 +78,7 @@ defmodule BrekitdownWeb.FallbackControllerTest do
              "errors" => %{
                "code" => "goal_completed",
                "detail" =>
-                 "This task's goal is completed, so its tasks cannot be open. Reopen the goal first."
+                 "This goal is completed, so its tasks cannot be added or made open. Reopen the goal first."
              }
            }
   end

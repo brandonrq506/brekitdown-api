@@ -436,6 +436,31 @@ defmodule Brekitdown.TasksTest do
       %{scope: scope, goal: goal, task: Tasks.get_task!(scope, task.reference_xid)}
     end
 
+    test "create_task/2 refuses a task in the goal, whatever its status", %{
+      scope: scope,
+      goal: goal
+    } do
+      for status <- [:scheduled, :completed] do
+        assert {:error, :goal_completed} =
+                 Tasks.create_task(scope, %{
+                   name: "New",
+                   status: status,
+                   goal_reference_xid: goal.reference_xid
+                 })
+      end
+
+      assert {:ok, tasks} = Tasks.list_tasks(scope)
+      assert length(tasks) == 1
+    end
+
+    test "create_task/2 refuses a subtask under one of the goal's tasks", %{
+      scope: scope,
+      task: task
+    } do
+      assert {:error, :goal_completed} =
+               Tasks.create_task(scope, %{name: "Sub", parent_reference_xid: task.reference_xid})
+    end
+
     test "update_task/3 refuses every open status", %{scope: scope, task: task} do
       for status <- [:scheduled, :in_progress, :on_hold] do
         assert {:error, :goal_completed} = Tasks.update_task(scope, task, %{status: status})
