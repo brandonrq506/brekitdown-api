@@ -1,6 +1,7 @@
 defmodule Brekitdown.TasksTest do
   use Brekitdown.DataCase
 
+  alias Brekitdown.Goals
   alias Brekitdown.Tags
   alias Brekitdown.Tags.{Tag, TaskTag}
   alias Brekitdown.Tasks
@@ -421,6 +422,65 @@ defmodule Brekitdown.TasksTest do
       task = task_fixture(scope)
 
       assert_raise MatchError, fn -> Tasks.update_task(other_scope, task, %{name: "x"}) end
+    end
+  end
+
+  describe "tasks of a completed goal" do
+    # Tasks are created before completing, which drops them: the state completion leaves behind.
+    setup do
+      scope = user_scope_fixture()
+      goal = goal_fixture(scope)
+      task = task_fixture(scope, %{goal_reference_xid: goal.reference_xid})
+      {:ok, goal} = Goals.complete_goal(scope, goal)
+
+      %{scope: scope, goal: goal, task: Tasks.get_task!(scope, task.reference_xid)}
+    end
+
+    test "update_task/3 refuses every open status", %{scope: scope, task: task} do
+      for status <- [:scheduled, :in_progress, :on_hold] do
+        assert {:error, :goal_completed} = Tasks.update_task(scope, task, %{status: status})
+      end
+
+      assert Tasks.get_task!(scope, task.reference_xid).status == :dropped
+    end
+
+    test "update_task/3 allows a change that keeps the task closed", %{scope: scope, task: task} do
+      assert {:ok, updated} = Tasks.update_task(scope, task, %{status: :completed, name: "Done"})
+      assert updated.status == :completed
+      assert updated.name == "Done"
+    end
+
+    test "update_status/3 refuses an open status", %{scope: scope, task: task} do
+      assert {:error, :goal_completed} = Tasks.update_status(scope, task, :in_progress)
+      assert Tasks.get_task!(scope, task.reference_xid).status == :dropped
+    end
+
+    test "update_status/3 allows a closed status", %{scope: scope, task: task} do
+      assert {:ok, %Task{status: :completed}} = Tasks.update_status(scope, task, :completed)
+    end
+
+    test "update_task/3 allows an open status once the goal is reopened", %{
+      scope: scope,
+      goal: goal,
+      task: task
+    } do
+      {:ok, _goal} = Goals.reopen_goal(scope, goal)
+
+      assert {:ok, %Task{status: :scheduled}} =
+               Tasks.update_task(scope, task, %{status: :scheduled})
+    end
+  end
+
+  describe "tasks of a goal that is not completed" do
+    test "update_task/3 and update_status/3 allow open statuses" do
+      scope = user_scope_fixture()
+      goal = goal_fixture(scope)
+
+      task =
+        task_fixture(scope, %{goal_reference_xid: goal.reference_xid, status: :dropped})
+
+      assert {:ok, task} = Tasks.update_task(scope, task, %{status: :on_hold})
+      assert {:ok, %Task{status: :in_progress}} = Tasks.update_status(scope, task, :in_progress)
     end
   end
 

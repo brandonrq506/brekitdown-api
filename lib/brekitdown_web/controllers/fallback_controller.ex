@@ -40,6 +40,14 @@ defmodule BrekitdownWeb.FallbackController do
         "This task already has a time entry that has not ended."
       )
 
+  def call(conn, {:error, :goal_completed}),
+    do:
+      render_conflict(
+        conn,
+        "goal_completed",
+        "This task's goal is completed, so its tasks cannot be open. Reopen the goal first."
+      )
+
   # Safety net: anything unmatched is logged and returned as a controlled 500.
   # The explicit clauses above always win, so this never changes how known errors format.
   def call(conn, {:error, reason}) do

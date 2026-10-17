@@ -8,6 +8,7 @@ defmodule BrekitdownWeb.TaskController do
 
   alias BrekitdownWeb.Schemas.{
     ChangesetError,
+    ConflictError,
     Error,
     TaskCreateRequest,
     TaskFilters,
@@ -98,6 +99,7 @@ defmodule BrekitdownWeb.TaskController do
     responses: [
       ok: {"Task updated", "application/json", TaskResponse},
       unprocessable_entity: {"Validation errors", "application/json", ChangesetError},
+      conflict: {"The task's goal is completed", "application/json", ConflictError},
       not_found: {"Not found", "application/json", Error},
       unauthorized: {"Unauthorized", "application/json", Error}
     ]

@@ -362,6 +362,31 @@ defmodule BrekitdownWeb.TaskControllerTest do
     end
   end
 
+  describe "update a task of a completed goal" do
+    setup %{scope: scope} do
+      goal = goal_fixture(scope)
+      task = task_fixture(scope, %{goal_reference_xid: goal.reference_xid})
+      {:ok, _goal} = Brekitdown.Goals.complete_goal(scope, goal)
+
+      %{task: task}
+    end
+
+    test "409 when moving the task to an open status", %{conn: conn, task: task} do
+      conn = put(conn, ~p"/api/tasks/#{task}", task: %{status: "scheduled"})
+      body = assert_response_schema(conn, 409, "ConflictError")
+
+      assert body["errors"]["code"] == "goal_completed"
+      assert body["errors"]["detail"] =~ "Reopen the goal"
+    end
+
+    test "200 for a change that keeps the task closed", %{conn: conn, task: task} do
+      conn = put(conn, ~p"/api/tasks/#{task}", task: %{name: "Renamed", status: "completed"})
+
+      assert %{"name" => "Renamed", "status" => "completed"} =
+               assert_response_schema(conn, 200, "TaskResponse")["data"]
+    end
+  end
+
   describe "delete task" do
     setup [:create_task]
 
