@@ -71,6 +71,18 @@ defmodule BrekitdownWeb.FallbackControllerTest do
            }
   end
 
+  test "{:error, :goal_completed} renders a 409 with its code and copy", %{conn: conn} do
+    conn = FallbackController.call(conn, {:error, :goal_completed})
+
+    assert json_response(conn, 409) == %{
+             "errors" => %{
+               "code" => "goal_completed",
+               "detail" =>
+                 "This task's goal is completed, so its tasks cannot be open. Reopen the goal first."
+             }
+           }
+  end
+
   test "an unknown reason is logged and rendered as a 500", %{conn: conn} do
     log =
       capture_log(fn ->

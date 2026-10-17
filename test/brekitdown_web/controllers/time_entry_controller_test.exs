@@ -2,6 +2,7 @@ defmodule BrekitdownWeb.TimeEntryControllerTest do
   use BrekitdownWeb.ConnCase, async: true
 
   import Brekitdown.AccountsFixtures, only: [user_scope_fixture: 0]
+  import Brekitdown.GoalsFixtures
   import Brekitdown.TasksFixtures
   import Brekitdown.TimeEntriesFixtures
 
@@ -135,6 +136,21 @@ defmodule BrekitdownWeb.TimeEntryControllerTest do
 
       assert body["errors"]["code"] == "entry_already_running"
       assert body["errors"]["detail"] =~ "has not ended"
+    end
+
+    test "409 when starting a running entry on a task of a completed goal", %{
+      conn: conn,
+      scope: scope
+    } do
+      goal = goal_fixture(scope)
+      task = task_fixture(scope, %{goal_reference_xid: goal.reference_xid})
+      {:ok, _goal} = Brekitdown.Goals.complete_goal(scope, goal)
+
+      conn = post(conn, ~p"/api/tasks/#{task}/time_entries", time_entry: %{started_at: now()})
+      body = assert_response_schema(conn, 409, "ConflictError")
+
+      assert body["errors"]["code"] == "goal_completed"
+      assert Brekitdown.TimeEntries.list_time_entries_by_task(scope, task) == []
     end
 
     test "422 when started_at is missing", %{conn: conn, task: task} do

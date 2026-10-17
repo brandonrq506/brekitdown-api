@@ -15,6 +15,8 @@ defmodule Brekitdown.Tasks do
   alias Brekitdown.Tasks.Task
   alias Brekitdown.Tasks.TaskStatuses
 
+  import Brekitdown.Tasks.TaskStatuses, only: [is_open_status: 1]
+
   @recommendation_opts [
     for: Task,
     filtering: false,
@@ -163,6 +165,9 @@ defmodule Brekitdown.Tasks do
   @doc """
   Updates a task.
 
+  Refused with `{:error, :goal_completed}` when the update would leave the task open in a
+  Completed goal (ADR-0001). Changes that keep it closed, like renaming, are allowed.
+
   ## Examples
 
       iex> update_task(scope, task, %{field: new_value})
@@ -171,14 +176,17 @@ defmodule Brekitdown.Tasks do
       iex> update_task(scope, task, %{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
+      iex> update_task(scope, task_of_completed_goal, %{status: :scheduled})
+      {:error, :goal_completed}
+
   """
   def update_task(%Scope{} = scope, %Task{} = task, attrs) do
     true = task.user_id == scope.user.id
 
-    with {:ok, task = %Task{}} <-
-           task
-           |> Task.update_changeset(attrs)
-           |> Repo.update() do
+    changeset = Task.update_changeset(task, attrs)
+
+    with :ok <- ensure_not_frozen(changeset),
+         {:ok, task = %Task{}} <- Repo.update(changeset) do
       {:ok, task}
     end
   end
@@ -285,18 +293,26 @@ defmodule Brekitdown.Tasks do
   entirely for a changeset with no changes, so `updated_at` does not move. Callers can
   therefore apply a status rule unconditionally instead of branching on "did it change?".
 
+  Refused with `{:error, :goal_completed}` when the status is open and the task's goal is
+  completed (ADR-0001).
+
   ## Examples
 
       iex> update_status(scope, task, :in_progress)
       {:ok, %Task{}}
 
+      iex> update_status(scope, task_of_completed_goal, :in_progress)
+      {:error, :goal_completed}
+
   """
   def update_status(%Scope{} = scope, %Task{} = task, status) do
     true = task.user_id == scope.user.id
 
-    task
-    |> Task.status_changeset(status)
-    |> Repo.update()
+    changeset = Task.status_changeset(task, status)
+
+    with :ok <- ensure_not_frozen(changeset) do
+      Repo.update(changeset)
+    end
   end
 
   @doc """
@@ -317,6 +333,28 @@ defmodule Brekitdown.Tasks do
     |> where(user_id: ^scope.user.id, goal_id: ^goal.id)
     |> where([t], t.status in ^TaskStatuses.open())
     |> Repo.update_all(set: [status: :dropped, updated_at: DateTime.utc_now(:second)])
+  end
+
+  # ADR-0001: a Completed goal freezes its tasks, so nothing may leave one open. Judged on the
+  # status the write would leave behind, so changes that keep a task closed still go through.
+  defp ensure_not_frozen(changeset) do
+    status = Ecto.Changeset.get_field(changeset, :status)
+    goal_id = Ecto.Changeset.get_field(changeset, :goal_id)
+
+    if is_open_status(status) and goal_completed?(goal_id) do
+      {:error, :goal_completed}
+    else
+      :ok
+    end
+  end
+
+  defp goal_completed?(nil), do: false
+
+  defp goal_completed?(goal_id) do
+    Goal
+    |> where(id: ^goal_id)
+    |> where([g], not is_nil(g.completed_at))
+    |> Repo.exists?()
   end
 
   defp maybe_put_goal(changeset, _scope, nil), do: changeset
