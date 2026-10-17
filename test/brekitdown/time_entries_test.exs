@@ -1,11 +1,13 @@
 defmodule Brekitdown.TimeEntriesTest do
   use Brekitdown.DataCase
 
+  alias Brekitdown.Goals
   alias Brekitdown.Tasks
   alias Brekitdown.TimeEntries
   alias Brekitdown.TimeEntries.TimeEntry
 
   import Brekitdown.AccountsFixtures, only: [user_scope_fixture: 0]
+  import Brekitdown.GoalsFixtures
   import Brekitdown.TasksFixtures
   import Brekitdown.TimeEntriesFixtures
 
@@ -167,6 +169,35 @@ defmodule Brekitdown.TimeEntriesTest do
       _entry = time_entry_fixture(scope, task)
 
       assert Tasks.get_task!(scope, task.reference_xid).status == :completed
+    end
+
+    test "a finished entry on a task of a completed goal succeeds and leaves it dropped" do
+      scope = user_scope_fixture()
+      goal = goal_fixture(scope)
+      task = task_fixture(scope, %{goal_reference_xid: goal.reference_xid})
+      {:ok, _goal} = Goals.complete_goal(scope, goal)
+      task = Tasks.get_task!(scope, task.reference_xid)
+
+      assert {:ok, %TimeEntry{}} =
+               TimeEntries.create_time_entry(scope, task, %{
+                 started_at: hours_ago(2),
+                 ended_at: hours_ago(1)
+               })
+
+      assert Tasks.get_task!(scope, task.reference_xid).status == :dropped
+    end
+
+    test "a running entry on a task of a completed goal is refused" do
+      scope = user_scope_fixture()
+      goal = goal_fixture(scope)
+      task = task_fixture(scope, %{goal_reference_xid: goal.reference_xid})
+      {:ok, _goal} = Goals.complete_goal(scope, goal)
+      task = Tasks.get_task!(scope, task.reference_xid)
+
+      assert {:error, :goal_completed} =
+               TimeEntries.create_time_entry(scope, task, %{started_at: hours_ago(1)})
+
+      assert TimeEntries.list_time_entries_by_task(scope, task) == []
     end
 
     test "raises for a task owned by another user" do

@@ -57,6 +57,7 @@ defmodule BrekitdownWeb.TaskController do
     responses: [
       created: {"Task created", "application/json", TaskResponse},
       unprocessable_entity: {"Validation errors", "application/json", ChangesetError},
+      conflict: {"The goal is completed", "application/json", ConflictError},
       unauthorized: {"Unauthorized", "application/json", Error}
     ]
   )
